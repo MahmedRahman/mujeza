@@ -21,52 +21,78 @@
         @if ($products->isEmpty())
             <p style="margin-bottom: 0; color: #6b7280;">لا توجد منتجات مضافة بعد.</p>
         @else
-            <div style="display: grid; gap: 12px;">
-                @foreach ($products as $product)
-                    <article style="border: 1px solid #efe3b7; border-radius: 12px; padding: 12px;">
-                        <h3 style="margin: 0 0 6px; font-weight: 700;">{{ $product->title }}</h3>
-                        <p style="margin: 0 0 8px; color: #4b5563;">
-                            السعر: {{ $product->price }} ر.س
-                            @if ($product->discount_price)
-                                - بعد الخصم: {{ $product->discount_price }} ر.س
-                            @endif
-                        </p>
-                        <p style="margin: 0 0 8px; color: #374151;">{{ $product->description }}</p>
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; min-width: 920px;">
+                    <thead>
+                        <tr style="background: #f8f2de;">
+                            <th style="padding: 10px; border: 1px solid #efe3b7; text-align: right;">المنتج</th>
+                            <th style="padding: 10px; border: 1px solid #efe3b7; text-align: right;">السعر</th>
+                            <th style="padding: 10px; border: 1px solid #efe3b7; text-align: right;">سعر الخصم</th>
+                            <th style="padding: 10px; border: 1px solid #efe3b7; text-align: right;">الوصف</th>
+                            <th style="padding: 10px; border: 1px solid #efe3b7; text-align: right;">معلومات إضافية</th>
+                            <th style="padding: 10px; border: 1px solid #efe3b7; text-align: right;">الصورة</th>
+                            <th style="padding: 10px; border: 1px solid #efe3b7; text-align: right;">الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($products as $product)
+                            <tr>
+                                <td style="padding: 10px; border: 1px solid #efe3b7; font-weight: 700;">{{ $product->title }}</td>
+                                <td style="padding: 10px; border: 1px solid #efe3b7;">{{ $product->price }} ر.س</td>
+                                <td style="padding: 10px; border: 1px solid #efe3b7;">
+                                    {{ $product->discount_price ? $product->discount_price . ' ر.س' : '—' }}
+                                </td>
+                                <td style="padding: 10px; border: 1px solid #efe3b7; color: #374151; max-width: 260px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                    {{ \Illuminate\Support\Str::limit($product->description, 140) }}
+                                </td>
+                                <td style="padding: 10px; border: 1px solid #efe3b7; color: #4b5563; max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                    @php
+                                        $meta = [];
 
-                        @if ($product->benefits)
-                            <p style="margin: 0 0 4px;"><strong>الفوائد:</strong> {{ implode(' - ', $product->benefits) }}</p>
-                        @endif
-                        @if ($product->diseases)
-                            <p style="margin: 0 0 4px;"><strong>الأمراض:</strong> {{ implode(' - ', $product->diseases) }}</p>
-                        @endif
-                        @if ($product->usage_methods)
-                            <p style="margin: 0 0 4px;"><strong>طرق الاستخدام:</strong> {{ implode(' - ', $product->usage_methods) }}</p>
-                        @endif
-                        @if ($product->sizes)
-                            <p style="margin: 0 0 4px;"><strong>الأحجام:</strong> {{ implode(' - ', $product->sizes) }}</p>
-                        @endif
-                        @if ($product->promo_videos)
-                            <p style="margin: 0 0 4px;"><strong>الفيديوهات:</strong> {{ implode(' - ', $product->promo_videos) }}</p>
-                        @endif
+                                        if ($product->benefits) {
+                                            $meta[] = 'الفوائد: ' . implode(' - ', $product->benefits);
+                                        }
 
-                        @if ($product->cover_image)
-                            <img src="{{ asset('storage/' . $product->cover_image) }}" alt="{{ $product->title }}" style="margin-top: 8px; max-width: 140px; border-radius: 8px;">
-                        @endif
+                                        if ($product->diseases) {
+                                            $meta[] = 'الأمراض: ' . implode(' - ', $product->diseases);
+                                        }
 
-                        <div style="margin-top: 10px; display:flex; gap:8px; flex-wrap:wrap;">
-                            <a href="{{ route('products.edit', $product) }}" style="text-decoration:none; border:1px solid #bfdbfe; background:#eff6ff; color:#1d4ed8; padding:8px 12px; border-radius:8px; font-weight:700;">
-                                تعديل المنتج
-                            </a>
-                            <form method="POST" action="{{ route('products.destroy', $product) }}">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" onclick="return confirm('هل أنت متأكد من حذف المنتج؟')" style="border:1px solid #fecaca; background:#fff1f2; color:#b91c1c; padding:8px 12px; border-radius:8px; font-weight:700; font-family:inherit; cursor:pointer;">
-                                    حذف المنتج
-                                </button>
-                            </form>
-                        </div>
-                    </article>
-                @endforeach
+                                        if ($product->usage_methods) {
+                                            $meta[] = 'طرق الاستخدام: ' . implode(' - ', $product->usage_methods);
+                                        }
+
+                                        if ($product->sizes) {
+                                            $meta[] = 'الأحجام: ' . implode(' - ', $product->sizes);
+                                        }
+                                    @endphp
+
+                                    {{ !empty($meta) ? implode(' | ', $meta) : '—' }}
+                                </td>
+                                <td style="padding: 10px; border: 1px solid #efe3b7;">
+                                    @if ($product->cover_image)
+                                        <img src="{{ asset('storage/' . $product->cover_image) }}" alt="{{ $product->title }}" style="max-width: 72px; border-radius: 8px;">
+                                    @else
+                                        —
+                                    @endif
+                                </td>
+                                <td style="padding: 10px; border: 1px solid #efe3b7;">
+                                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                                        <a href="{{ route('products.edit', $product) }}" style="text-decoration:none; border:1px solid #bfdbfe; background:#eff6ff; color:#1d4ed8; padding:7px 10px; border-radius:8px; font-weight:700;">
+                                            تعديل
+                                        </a>
+                                        <form method="POST" action="{{ route('products.destroy', $product) }}">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" onclick="return confirm('هل أنت متأكد من حذف المنتج؟')" style="border:1px solid #fecaca; background:#fff1f2; color:#b91c1c; padding:7px 10px; border-radius:8px; font-weight:700; font-family:inherit; cursor:pointer;">
+                                                حذف
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
             </div>
         @endif
     </section>
