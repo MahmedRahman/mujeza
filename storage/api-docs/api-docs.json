@@ -18,20 +18,8 @@
                     "Products"
                 ],
                 "summary": "Get products list",
-                "description": "Returns paginated products list.",
+                "description": "Returns all products in one response.",
                 "operationId": "getProducts",
-                "parameters": [
-                    {
-                        "name": "per_page",
-                        "in": "query",
-                        "description": "Items per page (1-100)",
-                        "required": false,
-                        "schema": {
-                            "type": "integer",
-                            "example": 20
-                        }
-                    }
-                ],
                 "responses": {
                     "200": {
                         "description": "Products fetched successfully",
@@ -48,27 +36,6 @@
                                             "items": {
                                                 "type": "object"
                                             }
-                                        },
-                                        "meta": {
-                                            "properties": {
-                                                "current_page": {
-                                                    "type": "integer",
-                                                    "example": 1
-                                                },
-                                                "last_page": {
-                                                    "type": "integer",
-                                                    "example": 1
-                                                },
-                                                "per_page": {
-                                                    "type": "integer",
-                                                    "example": 20
-                                                },
-                                                "total": {
-                                                    "type": "integer",
-                                                    "example": 1
-                                                }
-                                            },
-                                            "type": "object"
                                         }
                                     },
                                     "type": "object"

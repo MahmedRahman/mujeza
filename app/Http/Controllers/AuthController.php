@@ -100,16 +100,7 @@ class AuthController extends Controller
         operationId: 'getProducts',
         tags: ['Products'],
         summary: 'Get products list',
-        description: 'Returns paginated products list.',
-        parameters: [
-            new OA\Parameter(
-                name: 'per_page',
-                description: 'Items per page (1-100)',
-                in: 'query',
-                required: false,
-                schema: new OA\Schema(type: 'integer', example: 20)
-            ),
-        ],
+        description: 'Returns all products in one response.',
         responses: [
             new OA\Response(
                 response: 200,
@@ -122,16 +113,6 @@ class AuthController extends Controller
                             type: 'array',
                             items: new OA\Items(type: 'object')
                         ),
-                        new OA\Property(
-                            property: 'meta',
-                            type: 'object',
-                            properties: [
-                                new OA\Property(property: 'current_page', type: 'integer', example: 1),
-                                new OA\Property(property: 'last_page', type: 'integer', example: 1),
-                                new OA\Property(property: 'per_page', type: 'integer', example: 20),
-                                new OA\Property(property: 'total', type: 'integer', example: 1),
-                            ]
-                        ),
                     ]
                 )
             ),
@@ -139,10 +120,9 @@ class AuthController extends Controller
     )]
     public function apiProducts(Request $request): JsonResponse
     {
-        $perPage = max(1, min((int) $request->integer('per_page', 20), 100));
-        $products = Product::query()->latest()->paginate($perPage);
+        $products = Product::query()->latest()->get();
 
-        $items = collect($products->items())->map(function (Product $product) {
+        $items = $products->map(function (Product $product) {
             $coverImageUrl = $product->cover_image ? asset('storage/'.$product->cover_image) : null;
             $galleryImageUrls = collect($product->gallery_images ?? [])
                 ->filter()
@@ -180,12 +160,6 @@ class AuthController extends Controller
         return response()->json([
             'success' => true,
             'data' => $items,
-            'meta' => [
-                'current_page' => $products->currentPage(),
-                'last_page' => $products->lastPage(),
-                'per_page' => $products->perPage(),
-                'total' => $products->total(),
-            ],
         ]);
     }
 
