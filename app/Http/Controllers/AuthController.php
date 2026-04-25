@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use OpenApi\Attributes as OA;
 
 class AuthController extends Controller
 {
@@ -91,6 +92,100 @@ class AuthController extends Controller
     {
         return view('dashboard.products', [
             'products' => Product::query()->latest()->get(),
+        ]);
+    }
+
+    #[OA\Get(
+        path: '/api/products',
+        operationId: 'getProducts',
+        tags: ['Products'],
+        summary: 'Get products list',
+        description: 'Returns paginated products list.',
+        parameters: [
+            new OA\Parameter(
+                name: 'per_page',
+                description: 'Items per page (1-100)',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'integer', example: 20)
+            ),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Products fetched successfully',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'success', type: 'boolean', example: true),
+                        new OA\Property(
+                            property: 'data',
+                            type: 'array',
+                            items: new OA\Items(type: 'object')
+                        ),
+                        new OA\Property(
+                            property: 'meta',
+                            type: 'object',
+                            properties: [
+                                new OA\Property(property: 'current_page', type: 'integer', example: 1),
+                                new OA\Property(property: 'last_page', type: 'integer', example: 1),
+                                new OA\Property(property: 'per_page', type: 'integer', example: 20),
+                                new OA\Property(property: 'total', type: 'integer', example: 1),
+                            ]
+                        ),
+                    ]
+                )
+            ),
+        ]
+    )]
+    public function apiProducts(Request $request): JsonResponse
+    {
+        $perPage = max(1, min((int) $request->integer('per_page', 20), 100));
+        $products = Product::query()->latest()->paginate($perPage);
+
+        $items = collect($products->items())->map(function (Product $product) {
+            $coverImageUrl = $product->cover_image ? asset('storage/'.$product->cover_image) : null;
+            $galleryImageUrls = collect($product->gallery_images ?? [])
+                ->filter()
+                ->map(fn (string $path) => asset('storage/'.$path))
+                ->values()
+                ->all();
+
+            $promoVideos = collect($product->promo_videos ?? [])
+                ->filter()
+                ->values()
+                ->all();
+
+            return [
+                'id' => $product->id,
+                'title' => $product->title,
+                'price' => $product->price,
+                'discount_price' => $product->discount_price,
+                'description' => $product->description,
+                'benefits' => $product->benefits ?? [],
+                'diseases' => $product->diseases ?? [],
+                'usage_methods' => $product->usage_methods ?? [],
+                'sizes' => $product->sizes ?? [],
+                'cover_image' => $product->cover_image,
+                'cover_image_url' => $coverImageUrl,
+                'gallery_images' => $product->gallery_images ?? [],
+                'gallery_image_urls' => $galleryImageUrls,
+                'primary_gallery_image' => $product->primary_gallery_image,
+                'primary_gallery_image_url' => $product->primary_gallery_image ? asset('storage/'.$product->primary_gallery_image) : null,
+                'promo_videos' => $promoVideos,
+                'created_at' => optional($product->created_at)?->toISOString(),
+                'updated_at' => optional($product->updated_at)?->toISOString(),
+            ];
+        })->values();
+
+        return response()->json([
+            'success' => true,
+            'data' => $items,
+            'meta' => [
+                'current_page' => $products->currentPage(),
+                'last_page' => $products->lastPage(),
+                'per_page' => $products->perPage(),
+                'total' => $products->total(),
+            ],
         ]);
     }
 
