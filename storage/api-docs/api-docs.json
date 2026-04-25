@@ -45,6 +45,73 @@
                     }
                 }
             }
+        },
+        "/api/products/search": {
+            "get": {
+                "tags": [
+                    "Products"
+                ],
+                "summary": "Search products by name",
+                "description": "Searches products using product title or description (partial match).",
+                "operationId": "searchProductsByName",
+                "parameters": [
+                    {
+                        "name": "name",
+                        "in": "query",
+                        "description": "Product name to search for (optional if search is provided)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "سدر"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Alias for name query parameter",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "سدر"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Products search completed successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "query": {
+                                            "type": "string",
+                                            "example": "سدر"
+                                        },
+                                        "count": {
+                                            "type": "integer",
+                                            "example": 2
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
         }
     },
     "tags": [

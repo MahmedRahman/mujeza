@@ -122,43 +122,80 @@ class AuthController extends Controller
     {
         $products = Product::query()->latest()->get();
 
-        $items = $products->map(function (Product $product) {
-            $coverImageUrl = $product->cover_image ? asset('storage/'.$product->cover_image) : null;
-            $galleryImageUrls = collect($product->gallery_images ?? [])
-                ->filter()
-                ->map(fn (string $path) => asset('storage/'.$path))
-                ->values()
-                ->all();
-
-            $promoVideos = collect($product->promo_videos ?? [])
-                ->filter()
-                ->values()
-                ->all();
-
-            return [
-                'id' => $product->id,
-                'title' => $product->title,
-                'price' => $product->price,
-                'discount_price' => $product->discount_price,
-                'description' => $product->description,
-                'benefits' => $product->benefits ?? [],
-                'diseases' => $product->diseases ?? [],
-                'usage_methods' => $product->usage_methods ?? [],
-                'sizes' => $product->sizes ?? [],
-                'cover_image' => $product->cover_image,
-                'cover_image_url' => $coverImageUrl,
-                'gallery_images' => $product->gallery_images ?? [],
-                'gallery_image_urls' => $galleryImageUrls,
-                'primary_gallery_image' => $product->primary_gallery_image,
-                'primary_gallery_image_url' => $product->primary_gallery_image ? asset('storage/'.$product->primary_gallery_image) : null,
-                'promo_videos' => $promoVideos,
-                'created_at' => optional($product->created_at)?->toISOString(),
-                'updated_at' => optional($product->updated_at)?->toISOString(),
-            ];
-        })->values();
+        $items = $products->map(fn (Product $product) => $this->transformProductForApi($product))->values();
 
         return response()->json([
             'success' => true,
+            'data' => $items,
+        ]);
+    }
+
+    #[OA\Get(
+        path: '/api/products/search',
+        operationId: 'searchProductsByName',
+        tags: ['Products'],
+        summary: 'Search products by name',
+        description: 'Searches products using product title or description (partial match).',
+        parameters: [
+            new OA\Parameter(
+                name: 'name',
+                description: 'Product name to search for (optional if search is provided)',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'string', example: 'سدر')
+            ),
+            new OA\Parameter(
+                name: 'search',
+                description: 'Alias for name query parameter',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'string', example: 'سدر')
+            ),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Products search completed successfully',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'success', type: 'boolean', example: true),
+                        new OA\Property(property: 'query', type: 'string', example: 'سدر'),
+                        new OA\Property(property: 'count', type: 'integer', example: 2),
+                        new OA\Property(
+                            property: 'data',
+                            type: 'array',
+                            items: new OA\Items(type: 'object')
+                        ),
+                    ]
+                )
+            ),
+            new OA\Response(
+                response: 422,
+                description: 'Validation error'
+            ),
+        ]
+    )]
+    public function apiSearchProducts(Request $request): JsonResponse
+    {
+        $query = trim((string) ($request->query('name') ?? $request->query('search') ?? ''));
+
+        $productsQuery = Product::query();
+
+        if ($query !== '') {
+            $productsQuery->where(function ($builder) use ($query) {
+                $builder->where('title', 'like', '%'.$query.'%')
+                    ->orWhere('description', 'like', '%'.$query.'%');
+            });
+        }
+
+        $products = $productsQuery->latest()->get();
+
+        $items = $products->map(fn (Product $product) => $this->transformProductForApi($product))->values();
+
+        return response()->json([
+            'success' => true,
+            'query' => $query,
+            'count' => $items->count(),
             'data' => $items,
         ]);
     }
@@ -452,6 +489,42 @@ class AuthController extends Controller
             ->filter()
             ->values()
             ->all();
+    }
+
+    private function transformProductForApi(Product $product): array
+    {
+        $coverImageUrl = $product->cover_image ? asset('storage/'.$product->cover_image) : null;
+        $galleryImageUrls = collect($product->gallery_images ?? [])
+            ->filter()
+            ->map(fn (string $path) => asset('storage/'.$path))
+            ->values()
+            ->all();
+
+        $promoVideos = collect($product->promo_videos ?? [])
+            ->filter()
+            ->values()
+            ->all();
+
+        return [
+            'id' => $product->id,
+            'title' => $product->title,
+            'price' => $product->price,
+            'discount_price' => $product->discount_price,
+            'description' => $product->description,
+            'benefits' => $product->benefits ?? [],
+            'diseases' => $product->diseases ?? [],
+            'usage_methods' => $product->usage_methods ?? [],
+            'sizes' => $product->sizes ?? [],
+            'cover_image' => $product->cover_image,
+            'cover_image_url' => $coverImageUrl,
+            'gallery_images' => $product->gallery_images ?? [],
+            'gallery_image_urls' => $galleryImageUrls,
+            'primary_gallery_image' => $product->primary_gallery_image,
+            'primary_gallery_image_url' => $product->primary_gallery_image ? asset('storage/'.$product->primary_gallery_image) : null,
+            'promo_videos' => $promoVideos,
+            'created_at' => optional($product->created_at)?->toISOString(),
+            'updated_at' => optional($product->updated_at)?->toISOString(),
+        ];
     }
 
     private function askDeepSeekForList(string $title, string $description, string $taskInstruction): array
