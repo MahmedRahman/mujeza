@@ -38,9 +38,9 @@
                         @foreach ($products as $product)
                             <tr>
                                 <td style="padding: 10px; border: 1px solid #efe3b7; font-weight: 700;">{{ $product->title }}</td>
-                                <td style="padding: 10px; border: 1px solid #efe3b7;">{{ $product->price }} ر.س</td>
+                                <td style="padding: 10px; border: 1px solid #efe3b7;">{{ $product->price }} د.ك</td>
                                 <td style="padding: 10px; border: 1px solid #efe3b7;">
-                                    {{ $product->discount_price ? $product->discount_price . ' ر.س' : '—' }}
+                                    {{ $product->discount_price ? $product->discount_price . ' د.ك' : '—' }}
                                 </td>
                                 <td style="padding: 10px; border: 1px solid #efe3b7; color: #374151; max-width: 260px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                                     {{ \Illuminate\Support\Str::limit($product->description, 140) }}

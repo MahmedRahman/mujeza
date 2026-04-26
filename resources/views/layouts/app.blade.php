@@ -50,7 +50,7 @@
         }
 
         .brand img {
-            max-width: 180px;
+            max-width: 220px;
             margin: 0 auto;
             display: block;
         }
@@ -151,7 +151,7 @@
     <div class="app">
         <aside class="sidebar">
             <div class="brand">
-                <img src="{{ asset('images/mujeza-logo.png') }}" alt="Mujeza Logo">
+                <img src="{{ asset('images/a2m-logo.png') }}" alt="A2M Logo">
             </div>
 
             <nav class="nav">
