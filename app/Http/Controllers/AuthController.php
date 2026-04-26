@@ -10,6 +10,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use OpenApi\Attributes as OA;
@@ -395,11 +396,17 @@ class AuthController extends Controller
             ]
         );
 
-        $diseases = $this->askDeepSeekForList(
-            $validated['title'],
-            $validated['description'],
-            "Return ONLY a JSON array of short disease/condition names in Arabic that honey may help support."
-        );
+        try {
+            $diseases = $this->askDeepSeekForList(
+                $validated['title'],
+                $validated['description'],
+                "Return ONLY a JSON array of short disease/condition names in Arabic that honey may help support."
+            );
+        } catch (\Throwable $exception) {
+            return response()->json([
+                'message' => $exception->getMessage(),
+            ], 503);
+        }
 
         return response()->json(['diseases' => $diseases]);
     }
@@ -417,11 +424,17 @@ class AuthController extends Controller
             ]
         );
 
-        $benefits = $this->askDeepSeekForList(
-            $validated['title'],
-            $validated['description'],
-            "Return ONLY a JSON array of short benefit statements in Arabic for this honey product."
-        );
+        try {
+            $benefits = $this->askDeepSeekForList(
+                $validated['title'],
+                $validated['description'],
+                "Return ONLY a JSON array of short benefit statements in Arabic for this honey product."
+            );
+        } catch (\Throwable $exception) {
+            return response()->json([
+                'message' => $exception->getMessage(),
+            ], 503);
+        }
 
         return response()->json(['benefits' => $benefits]);
     }
@@ -439,11 +452,17 @@ class AuthController extends Controller
             ]
         );
 
-        $usageMethods = $this->askDeepSeekForList(
-            $validated['title'],
-            $validated['description'],
-            "Return ONLY a JSON array of short usage instructions in Arabic for this honey product."
-        );
+        try {
+            $usageMethods = $this->askDeepSeekForList(
+                $validated['title'],
+                $validated['description'],
+                "Return ONLY a JSON array of short usage instructions in Arabic for this honey product."
+            );
+        } catch (\Throwable $exception) {
+            return response()->json([
+                'message' => $exception->getMessage(),
+            ], 503);
+        }
 
         return response()->json(['usage_methods' => $usageMethods]);
     }
@@ -529,9 +548,11 @@ class AuthController extends Controller
 
     private function askDeepSeekForList(string $title, string $description, string $taskInstruction): array
     {
-        $apiKey = (string) env('DEEPSEEK_API_KEY');
+        $apiKey = (string) config('services.deepseek.api_key', '');
+        $baseUrl = rtrim((string) config('services.deepseek.base_url', 'https://api.deepseek.com'), '/');
+
         if ($apiKey === '') {
-            return [];
+            throw new \RuntimeException('مفتاح DeepSeek غير مُعد على السيرفر.');
         }
 
         $prompt = "You are helping an e-commerce admin prepare product data for honey products.\n"
@@ -541,9 +562,10 @@ class AuthController extends Controller
             ."Product title: ".$title."\n"
             ."Product description: ".$description;
 
-        $response = Http::timeout(30)
-            ->withToken($apiKey)
-            ->post('https://api.deepseek.com/chat/completions', [
+        try {
+            $response = Http::timeout(30)
+                ->withToken($apiKey)
+                ->post($baseUrl.'/chat/completions', [
                 'model' => 'deepseek-chat',
                 'messages' => [
                     ['role' => 'system', 'content' => 'Return valid JSON only.'],
@@ -551,9 +573,21 @@ class AuthController extends Controller
                 ],
                 'temperature' => 0.4,
             ]);
+        } catch (\Throwable $exception) {
+            Log::error('DeepSeek request failed', [
+                'message' => $exception->getMessage(),
+            ]);
+
+            throw new \RuntimeException('تعذر الاتصال بخدمة الذكاء الاصطناعي حالياً.');
+        }
 
         if (! $response->successful()) {
-            return [];
+            Log::warning('DeepSeek non-success response', [
+                'status' => $response->status(),
+                'body' => $response->body(),
+            ]);
+
+            throw new \RuntimeException('خدمة الذكاء الاصطناعي رفضت الطلب. تأكد من المفتاح وصلاحياته.');
         }
 
         $content = (string) data_get($response->json(), 'choices.0.message.content', '[]');
@@ -561,7 +595,11 @@ class AuthController extends Controller
 
         $decoded = json_decode($content, true);
         if (! is_array($decoded)) {
-            return [];
+            Log::warning('DeepSeek invalid JSON response', [
+                'content' => $content,
+            ]);
+
+            throw new \RuntimeException('تم استلام رد غير صالح من خدمة الذكاء الاصطناعي.');
         }
 
         return collect($decoded)

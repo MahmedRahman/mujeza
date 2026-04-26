@@ -156,8 +156,6 @@
 
             <nav class="nav">
                 <a class="{{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">الرئيسية</a>
-                <a class="{{ request()->routeIs('categories.*') ? 'active' : '' }}" href="{{ route('categories.index') }}">الفئات</a>
-                <a class="{{ request()->routeIs('diseases.*') ? 'active' : '' }}" href="{{ route('diseases.index') }}">الأمراض</a>
                 <a class="{{ request()->routeIs('products.*') ? 'active' : '' }}" href="{{ route('products.index') }}">المنتجات</a>
                 <a class="{{ request()->routeIs('settings.*') ? 'active' : '' }}" href="{{ route('settings.index') }}">الإعدادات</a>
             </nav>
@@ -180,7 +178,7 @@
             </main>
 
             <footer class="footer">
-                Mujeza Admin Dashboard - جميع الحقوق محفوظة
+                Mujeza Admin Dashboard - جميع الحقوق محفوظة - A2M Marketing & Advertising Agenc
             </footer>
         </div>
     </div>
