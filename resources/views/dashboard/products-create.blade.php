@@ -402,7 +402,7 @@
                 aiDiseaseStatus.textContent = 'جاري توليد اقتراحات الأمراض...';
 
                 try {
-                    const response = await fetch('{{ route('products.ai.diseases') }}', {
+                    const response = await fetch('{{ route('products.ai.diseases', [], false) }}', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -496,7 +496,7 @@
                 aiBenefitStatus.textContent = 'جاري توليد اقتراحات الفوائد...';
                 try {
                     const suggestions = await requestAiSuggestions(
-                        '{{ route('products.ai.benefits') }}',
+                        '{{ route('products.ai.benefits', [], false) }}',
                         'benefits',
                         aiBenefitStatus,
                         aiBenefitBtn
@@ -523,7 +523,7 @@
                 aiUsageStatus.textContent = 'جاري توليد اقتراحات طرق الاستخدام...';
                 try {
                     const suggestions = await requestAiSuggestions(
-                        '{{ route('products.ai.usage') }}',
+                        '{{ route('products.ai.usage', [], false) }}',
                         'usage_methods',
                         aiUsageStatus,
                         aiUsageBtn
