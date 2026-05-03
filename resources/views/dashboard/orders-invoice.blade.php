@@ -54,8 +54,15 @@
             </div>
         </div>
 
+        @if (!empty($order->items_text))
+            <div style="border:1px solid #efe3b7; border-radius:10px; padding:12px; background:#fffcf2; margin-bottom: 14px;">
+                <div style="font-weight:800; margin-bottom:6px;">العناصر المطلوبة</div>
+                <div style="color:#374151; font-weight:700; white-space: pre-wrap;">{{ $order->items_text }}</div>
+            </div>
+        @endif
+
         @if ($order->items->isEmpty())
-            <p style="margin:0; color:#6b7280;">لا توجد عناصر في هذا الطلب.</p>
+            <p style="margin:0; color:#6b7280;">لا توجد عناصر مفصلة في هذا الطلب.</p>
         @else
             <div style="overflow-x:auto;">
                 <table style="width:100%; border-collapse:collapse; min-width: 820px;">
