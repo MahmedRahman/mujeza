@@ -18,6 +18,43 @@
             + إضافة منتج جديد
         </a>
 
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin: 16px 0;">
+            <div style="border:1px solid #efe3b7; border-radius:10px; padding:14px; background:#fffcf2;">
+                <div style="color:#6b7280; font-weight:800; margin-bottom:6px;">إجمالي المنتجات</div>
+                <div style="font-size:26px; font-weight:900; color:#111827;">{{ $totalProductsCount }}</div>
+            </div>
+            <div style="border:1px solid #efe3b7; border-radius:10px; padding:14px; background:#fffcf2;">
+                <div style="color:#6b7280; font-weight:800; margin-bottom:6px;">عدد المنتجات المتاحة</div>
+                <div style="font-size:26px; font-weight:900; color:#111827;">{{ $availableProductsCount }}</div>
+            </div>
+            <div style="border:1px solid #efe3b7; border-radius:10px; padding:14px; background:#fffcf2;">
+                <div style="color:#6b7280; font-weight:800; margin-bottom:6px;">عدد المنتجات غير المتاحة</div>
+                <div style="font-size:26px; font-weight:900; color:#b91c1c;">{{ $unavailableProductsCount ?? 0 }}</div>
+            </div>
+            <div style="border:1px solid #efe3b7; border-radius:10px; padding:14px; background:#fffcf2;">
+                <div style="color:#6b7280; font-weight:800; margin-bottom:6px;">نتائج الفلترة الحالية</div>
+                <div style="font-size:26px; font-weight:900; color:#111827;">{{ $filteredProductsCount ?? 0 }}</div>
+            </div>
+        </div>
+
+        <form method="GET" action="{{ route('products.index') }}" style="margin-bottom: 14px; display:flex; gap: 10px; flex-wrap:wrap; align-items:center;">
+            <input
+                name="q"
+                type="text"
+                value="{{ $q ?? '' }}"
+                placeholder="فلتر باسم المنتج"
+                style="width: 320px; max-width: 100%; border:1px solid #d1d5db; border-radius:8px; padding:10px; font-family:inherit;"
+            >
+            <button type="submit" style="border:none; background:#d4af37; color:#111827; padding:10px 18px; border-radius:8px; font-weight:800; font-family:inherit; cursor:pointer;">
+                تطبيق
+            </button>
+            @if (($q ?? '') !== '')
+                <a href="{{ route('products.index') }}" style="display:inline-block; text-decoration:none; border:1px solid #d1d5db; background:#fff; color:#111827; padding:10px 14px; border-radius:8px; font-weight:800;">
+                    إلغاء الفلتر
+                </a>
+            @endif
+        </form>
+
         @if ($products->isEmpty())
             <p style="margin-bottom: 0; color: #6b7280;">لا توجد منتجات مضافة بعد.</p>
         @else
@@ -37,7 +74,12 @@
                     <tbody>
                         @foreach ($products as $product)
                             <tr>
-                                <td style="padding: 10px; border: 1px solid #efe3b7; font-weight: 700;">{{ $product->title }}</td>
+                                <td style="padding: 10px; border: 1px solid #efe3b7; font-weight: 700;">
+                                    {{ $product->title }}
+                                    <div style="margin-top:6px; font-size:12px; font-weight:900; color: {{ $product->is_available ? '#166534' : '#b91c1c' }};">
+                                        {{ $product->is_available ? 'متاح' : 'غير متاح' }}
+                                    </div>
+                                </td>
                                 <td style="padding: 10px; border: 1px solid #efe3b7;">{{ $product->price }} د.ك</td>
                                 <td style="padding: 10px; border: 1px solid #efe3b7;">
                                     {{ $product->discount_price ? $product->discount_price . ' د.ك' : '—' }}
@@ -96,4 +138,5 @@
             </div>
         @endif
     </section>
+
 @endsection

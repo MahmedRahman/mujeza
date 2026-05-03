@@ -75,6 +75,27 @@
             border: 1px solid #e9d891;
         }
 
+        .nav-group {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px dashed var(--line);
+        }
+
+        .nav-group-title {
+            display: block;
+            margin-bottom: 8px;
+            padding: 8px 12px;
+            border-radius: 10px;
+            background: #f8f2de;
+            color: var(--ink);
+            font-weight: 800;
+            font-size: 15px;
+        }
+
+        .nav-group a {
+            padding-right: 18px;
+        }
+
         .main {
             display: grid;
             grid-template-rows: auto 1fr auto;
@@ -157,7 +178,18 @@
             <nav class="nav">
                 <a class="{{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">الرئيسية</a>
                 <a class="{{ request()->routeIs('products.*') ? 'active' : '' }}" href="{{ route('products.index') }}">المنتجات</a>
-                <a class="{{ request()->routeIs('settings.*') ? 'active' : '' }}" href="{{ route('settings.index') }}">الإعدادات</a>
+                <a class="{{ request()->routeIs('orders.*') ? 'active' : '' }}" href="{{ route('orders.index') }}">الطلبات</a>
+                <a class="{{ request()->routeIs('branches.*') ? 'active' : '' }}" href="{{ route('branches.index') }}">الفروع</a>
+                <a class="{{ request()->routeIs('complaints.*') ? 'active' : '' }}" href="{{ route('complaints.index') }}">الشكاوى والاستفسارات</a>
+
+                <div class="nav-group">
+                    <span class="nav-group-title">بيانات النظام</span>
+                    <a class="{{ request()->routeIs('settings.*') ? 'active' : '' }}" href="{{ route('settings.index') }}">الإعدادات</a>
+                    <a class="{{ request()->routeIs('categories.*') ? 'active' : '' }}" href="{{ route('categories.index') }}">الفئات</a>
+                    <a class="{{ request()->routeIs('diseases.*') ? 'active' : '' }}" href="{{ route('diseases.index') }}">الأمراض</a>
+                    <a class="{{ request()->routeIs('conversations.*') ? 'active' : '' }}" href="{{ route('conversations.index') }}">المحادثات</a>
+                    <a class="{{ request()->is('api/documentation*') ? 'active' : '' }}" href="{{ url('/api/documentation') }}">Swagger</a>
+                </div>
             </nav>
         </aside>
 

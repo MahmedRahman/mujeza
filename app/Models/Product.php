@@ -10,6 +10,7 @@ class Product extends Model
         'title',
         'price',
         'discount_price',
+        'is_available',
         'description',
         'benefits',
         'diseases',
@@ -28,5 +29,6 @@ class Product extends Model
         'sizes' => 'array',
         'gallery_images' => 'array',
         'promo_videos' => 'array',
+        'is_available' => 'boolean',
     ];
 }

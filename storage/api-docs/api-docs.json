@@ -112,12 +112,284 @@
                     }
                 }
             }
+        },
+        "/api/complaints": {
+            "get": {
+                "tags": [
+                    "Complaints"
+                ],
+                "summary": "Get complaints and inquiries list",
+                "description": "Returns complaints list with optional text search in title, description, or phone.",
+                "operationId": "getComplaints",
+                "parameters": [
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "description": "Search query (optional)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "تأخير الطلب"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Complaints fetched successfully"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Complaints"
+                ],
+                "summary": "Create complaint or inquiry",
+                "operationId": "storeComplaint",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "title",
+                                    "description",
+                                    "phone"
+                                ],
+                                "properties": {
+                                    "title": {
+                                        "type": "string",
+                                        "example": "استفسار عن المنتج"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "أريد معرفة طريقة الاستخدام المناسبة."
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "96550000000"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Complaint created successfully"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/api/complaints/{id}": {
+            "get": {
+                "tags": [
+                    "Complaints"
+                ],
+                "summary": "Get a single complaint/inquiry",
+                "operationId": "showComplaint",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Complaint fetched successfully"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Complaints"
+                ],
+                "summary": "Update complaint or inquiry",
+                "operationId": "updateComplaint",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "title",
+                                    "description",
+                                    "phone"
+                                ],
+                                "properties": {
+                                    "title": {
+                                        "type": "string",
+                                        "example": "شكوى عن تأخر الرد"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "لم يصلني رد حتى الآن."
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "96550000000"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Complaint updated successfully"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Complaints"
+                ],
+                "summary": "Delete complaint or inquiry",
+                "operationId": "deleteComplaint",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Complaint deleted successfully"
+                    }
+                }
+            }
+        },
+        "/api/orders": {
+            "post": {
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "Create order",
+                "description": "Creates a new order with one or more items. Prices are calculated automatically from products table.",
+                "operationId": "storeOrder",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "customer_name",
+                                    "phone",
+                                    "items"
+                                ],
+                                "properties": {
+                                    "customer_name": {
+                                        "type": "string",
+                                        "example": "محمد أحمد"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "96550000000"
+                                    },
+                                    "status": {
+                                        "type": "string",
+                                        "example": "قيد المعالجة"
+                                    },
+                                    "items": {
+                                        "type": "array",
+                                        "items": {
+                                            "properties": {
+                                                "product_id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "quantity": {
+                                                    "type": "integer",
+                                                    "example": 2
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Order created successfully"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/api/orders/status": {
+            "get": {
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "Get order status by phone number",
+                "description": "Returns latest order status and all orders for the provided phone number.",
+                "operationId": "getOrderStatusByPhone",
+                "parameters": [
+                    {
+                        "name": "phone",
+                        "in": "query",
+                        "description": "Customer phone number",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "96550000000"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Order status fetched successfully"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
         }
     },
     "tags": [
         {
             "name": "Products",
             "description": "Products"
+        },
+        {
+            "name": "Complaints",
+            "description": "Complaints"
+        },
+        {
+            "name": "Orders",
+            "description": "Orders"
         }
     ]
 }

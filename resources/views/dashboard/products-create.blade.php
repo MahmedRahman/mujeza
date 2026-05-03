@@ -44,6 +44,18 @@
                     <label style="display:block; margin-bottom:6px; font-weight:700;">السعر بعد الخصم</label>
                     <input name="discount_price" type="number" step="0.01" min="0" value="{{ old('discount_price') }}" style="width:100%; border:1px solid #d1d5db; border-radius:8px; padding:10px; font-family:inherit;">
                 </div>
+
+                <div>
+                    <label style="display:block; margin-bottom:6px; font-weight:700;">متاح</label>
+                    <label style="display:flex; align-items:center; gap:8px; border:1px solid #d1d5db; border-radius:8px; padding:10px; background:#fff;">
+                        <input
+                            name="is_available"
+                            type="checkbox"
+                            value="1"
+                            {{ old('is_available', '1') === '1' ? 'checked' : '' }}
+                        >
+                    </label>
+                </div>
             </div>
 
             <div style="margin-top:12px;">
