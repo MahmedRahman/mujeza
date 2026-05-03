@@ -24,6 +24,7 @@
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">رقم الطلب</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">اسم العميل</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">تليفون</th>
+                            <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">عنوان التوصيل</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">الحالة</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">تاريخ الإدخال</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">الإجمالي</th>
@@ -43,6 +44,9 @@
                                     <a href="tel:{{ $order->phone }}" style="color:#1d4ed8; text-decoration:none; font-weight:700;">
                                         {{ $order->phone }}
                                     </a>
+                                </td>
+                                <td style="padding: 10px; border: 1px solid #efe3b7; color:#374151; font-weight:600;">
+                                    {{ $order->delivery_address ?: '—' }}
                                 </td>
                                 <td style="padding: 10px; border: 1px solid #efe3b7; color:#374151;">
                                     {{ $order->status }}

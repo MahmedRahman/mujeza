@@ -10,6 +10,7 @@ class Order extends Model
         'order_number',
         'customer_name',
         'phone',
+        'delivery_address',
         'status',
         'total_amount',
     ];

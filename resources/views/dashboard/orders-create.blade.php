@@ -32,6 +32,10 @@
                     <label style="display:block; margin-bottom:6px; font-weight:700;">تليفون العميل</label>
                     <input name="phone" type="text" value="{{ old('phone') }}" required style="width:100%; border:1px solid #d1d5db; border-radius:8px; padding:10px; font-family:inherit;">
                 </div>
+                <div style="grid-column: 1 / -1;">
+                    <label style="display:block; margin-bottom:6px; font-weight:700;">عنوان التوصيل</label>
+                    <textarea name="delivery_address" rows="2" required style="width:100%; border:1px solid #d1d5db; border-radius:8px; padding:10px; font-family:inherit; resize:vertical;">{{ old('delivery_address') }}</textarea>
+                </div>
                 <div>
                     <label style="display:block; margin-bottom:6px; font-weight:700;">حالة الطلب</label>
                     <select name="status" style="width:100%; border:1px solid #d1d5db; border-radius:8px; padding:10px; font-family:inherit;" required>

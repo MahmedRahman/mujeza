@@ -42,6 +42,10 @@
                     </div>
                 </div>
                 <div>
+                    <div style="font-weight:800; margin-bottom:6px;">عنوان التوصيل</div>
+                    <div style="color:#374151; font-weight:700;">{{ $order->delivery_address ?: '—' }}</div>
+                </div>
+                <div>
                     <div style="font-weight:800; margin-bottom:6px;">الإجمالي</div>
                     <div style="color:#111827; font-weight:900; font-size: 18px;">
                         {{ number_format((float) $order->total_amount, 2) }} د.ك

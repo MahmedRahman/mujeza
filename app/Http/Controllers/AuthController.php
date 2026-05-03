@@ -275,6 +275,7 @@ class AuthController extends Controller
         $validated = $request->validate([
             'customer_name' => ['required', 'string', 'max:255'],
             'phone' => ['required', 'string', 'max:50'],
+            'delivery_address' => ['required', 'string', 'max:2000'],
             'status' => ['required', 'string', 'max:100'],
 
             'product_ids' => ['required', 'array', 'min:1'],
@@ -321,6 +322,7 @@ class AuthController extends Controller
             'order_number' => $orderNumber,
             'customer_name' => $validated['customer_name'],
             'phone' => $validated['phone'],
+            'delivery_address' => trim((string) $validated['delivery_address']),
             'status' => $validated['status'],
             'total_amount' => round($total, 2),
         ]);
@@ -346,6 +348,7 @@ class AuthController extends Controller
         $validated = $request->validate([
             'customer_name' => ['required', 'string', 'max:255'],
             'phone' => ['required', 'string', 'max:50'],
+            'delivery_address' => ['required', 'string', 'max:2000'],
             'status' => ['required', 'string', 'max:100'],
             'product_ids' => ['required', 'array', 'min:1'],
             'product_ids.*' => ['required', 'integer', 'exists:products,id'],
@@ -387,6 +390,7 @@ class AuthController extends Controller
         $order->update([
             'customer_name' => $validated['customer_name'],
             'phone' => $validated['phone'],
+            'delivery_address' => trim((string) $validated['delivery_address']),
             'status' => $validated['status'],
             'total_amount' => round($total, 2),
         ]);
@@ -823,13 +827,14 @@ class AuthController extends Controller
         operationId: 'storeOrder',
         tags: ['Orders'],
         summary: 'Create order',
-        description: 'Creates a new order with one or more items. Prices are calculated automatically from products table.',
+        description: 'Creates a new order with one or more items. Client can send product_name (preferred) or product_id. Prices are calculated automatically from products table.',
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
-                required: ['customer_name', 'phone', 'items'],
+                required: ['customer_name', 'delivery_address', 'items'],
                 properties: [
                     new OA\Property(property: 'customer_name', type: 'string', example: 'محمد أحمد'),
+                    new OA\Property(property: 'delivery_address', type: 'string', example: 'الكويت - حولي - شارع بيروت - قطعة 4 - منزل 12'),
                     new OA\Property(property: 'phone', type: 'string', example: '96550000000'),
                     new OA\Property(property: 'status', type: 'string', example: 'قيد المعالجة'),
                     new OA\Property(
@@ -837,6 +842,7 @@ class AuthController extends Controller
                         type: 'array',
                         items: new OA\Items(
                             properties: [
+                                new OA\Property(property: 'product_name', type: 'string', example: 'عسل سدر'),
                                 new OA\Property(property: 'product_id', type: 'integer', example: 1),
                                 new OA\Property(property: 'quantity', type: 'integer', example: 2),
                             ],
@@ -855,29 +861,50 @@ class AuthController extends Controller
     {
         $validated = $request->validate([
             'customer_name' => ['required', 'string', 'max:255'],
-            'phone' => ['required', 'string', 'max:50'],
+            'delivery_address' => ['required', 'string', 'max:2000'],
+            'phone' => ['nullable', 'string', 'max:50'],
             'status' => ['nullable', 'string', 'max:100'],
             'items' => ['required', 'array', 'min:1'],
-            'items.*.product_id' => ['required', 'integer', 'exists:products,id'],
+            'items.*.product_name' => ['nullable', 'string', 'max:255'],
+            'items.*.product_id' => ['nullable', 'integer', 'exists:products,id'],
             'items.*.quantity' => ['required', 'integer', 'min:1', 'max:1000'],
         ]);
 
         $itemRows = array_values($validated['items']);
         $productIds = collect($itemRows)
             ->pluck('product_id')
+            ->filter(fn ($id) => $id !== null && $id !== '')
             ->map(fn ($id) => (int) $id)
             ->unique()
             ->values()
             ->all();
 
         $products = Product::query()->whereIn('id', $productIds)->get()->keyBy('id');
+        $productsByTitle = Product::query()
+            ->whereIn(
+                'title',
+                collect($itemRows)
+                    ->pluck('product_name')
+                    ->map(fn ($title) => trim((string) $title))
+                    ->filter()
+                    ->unique()
+                    ->values()
+                    ->all()
+            )
+            ->get()
+            ->keyBy(fn (Product $product) => mb_strtolower(trim((string) $product->title)));
 
         $total = 0.0;
         $lines = [];
         foreach ($itemRows as $row) {
-            $productId = (int) $row['product_id'];
+            $productId = isset($row['product_id']) ? (int) $row['product_id'] : null;
+            $productName = trim((string) ($row['product_name'] ?? ''));
             $quantity = (int) $row['quantity'];
-            $product = $products->get($productId);
+            $product = $productId ? $products->get($productId) : null;
+
+            if (! $product && $productName !== '') {
+                $product = $productsByTitle->get(mb_strtolower($productName));
+            }
 
             if (! $product) {
                 continue;
@@ -909,7 +936,8 @@ class AuthController extends Controller
             $order = Order::query()->create([
                 'order_number' => $orderNumber,
                 'customer_name' => $validated['customer_name'],
-                'phone' => $validated['phone'],
+                'delivery_address' => trim((string) $validated['delivery_address']),
+                'phone' => trim((string) ($validated['phone'] ?? '')),
                 'status' => $validated['status'] ?? 'قيد المعالجة',
                 'total_amount' => round($total, 2),
             ]);
@@ -939,14 +967,28 @@ class AuthController extends Controller
         path: '/api/orders/status',
         operationId: 'getOrderStatusByPhone',
         tags: ['Orders'],
-        summary: 'Get order status by phone number',
-        description: 'Returns latest order status and all orders for the provided phone number.',
+        summary: 'Get order status',
+        description: 'Returns latest order status and all matching orders by order_number or customer_name or phone.',
         parameters: [
             new OA\Parameter(
-                name: 'phone',
-                description: 'Customer phone number',
+                name: 'order_number',
+                description: 'Order number (preferred)',
                 in: 'query',
-                required: true,
+                required: false,
+                schema: new OA\Schema(type: 'integer', example: 1024)
+            ),
+            new OA\Parameter(
+                name: 'customer_name',
+                description: 'Customer name',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'string', example: 'محمد أحمد')
+            ),
+            new OA\Parameter(
+                name: 'phone',
+                description: 'Customer phone number (optional fallback)',
+                in: 'query',
+                required: false,
                 schema: new OA\Schema(type: 'string', example: '96550000000')
             ),
         ],
@@ -958,23 +1000,39 @@ class AuthController extends Controller
     public function apiOrderStatusByPhone(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'phone' => ['required', 'string', 'max:50'],
+            'order_number' => ['nullable', 'integer', 'min:1'],
+            'customer_name' => ['nullable', 'string', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:50'],
         ]);
 
-        $phone = trim((string) $validated['phone']);
+        $orderNumber = isset($validated['order_number']) ? (int) $validated['order_number'] : null;
+        $customerName = trim((string) ($validated['customer_name'] ?? ''));
+        $phone = trim((string) ($validated['phone'] ?? ''));
 
-        $orders = Order::query()
-            ->with('items')
-            ->where('phone', $phone)
-            ->latest()
-            ->get();
+        if (! $orderNumber && $customerName === '' && $phone === '') {
+            return response()->json([
+                'success' => false,
+                'message' => 'يرجى إرسال order_number أو customer_name أو phone.',
+            ], 422);
+        }
+
+        $ordersQuery = Order::query()->with('items');
+
+        if ($orderNumber) {
+            $ordersQuery->where('order_number', $orderNumber);
+        } elseif ($customerName !== '') {
+            $ordersQuery->where('customer_name', 'like', '%'.$customerName.'%');
+        } else {
+            $ordersQuery->where('phone', $phone);
+        }
+
+        $orders = $ordersQuery->latest()->get();
 
         $items = $orders->map(fn (Order $order) => $this->transformOrderForApi($order))->values();
         $latest = $items->first();
 
         return response()->json([
             'success' => true,
-            'phone' => $phone,
             'found' => $latest !== null,
             'latest_status' => $latest['status'] ?? null,
             'count' => $items->count(),
@@ -1438,15 +1496,14 @@ class AuthController extends Controller
             'id' => $order->id,
             'order_number' => $order->order_number,
             'customer_name' => $order->customer_name,
-            'phone' => $order->phone,
+            'delivery_address' => $order->delivery_address,
             'status' => $order->status,
             'total_amount' => (float) $order->total_amount,
             'items' => $order->items->map(fn (OrderItem $item) => [
                 'id' => $item->id,
-                'product_id' => $item->product_id,
-                'product_title' => $item->product_title,
-                'unit_price' => (float) $item->unit_price,
-                'quantity' => (int) $item->quantity,
+                'product_name' => $item->product_title,
+                'price' => (float) $item->unit_price,
+                'count' => (int) $item->quantity,
                 'line_total' => (float) $item->line_total,
             ])->values()->all(),
             'created_at' => optional($order->created_at)?->toISOString(),
