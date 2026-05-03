@@ -11,6 +11,7 @@ class Order extends Model
         'customer_name',
         'phone',
         'delivery_address',
+        'items_text',
         'status',
         'total_amount',
     ];

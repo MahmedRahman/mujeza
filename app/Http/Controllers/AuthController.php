@@ -827,7 +827,7 @@ class AuthController extends Controller
         operationId: 'storeOrder',
         tags: ['Orders'],
         summary: 'Create order',
-        description: 'Creates a new order with one or more items. Client can send product_name (preferred) or product_id. Prices are calculated automatically from products table.',
+        description: 'Creates a new order. The items field must be a single text value describing requested products.',
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
@@ -837,18 +837,7 @@ class AuthController extends Controller
                     new OA\Property(property: 'delivery_address', type: 'string', example: 'الكويت - حولي - شارع بيروت - قطعة 4 - منزل 12'),
                     new OA\Property(property: 'phone', type: 'string', example: '96550000000'),
                     new OA\Property(property: 'status', type: 'string', example: 'قيد المعالجة'),
-                    new OA\Property(
-                        property: 'items',
-                        type: 'array',
-                        items: new OA\Items(
-                            properties: [
-                                new OA\Property(property: 'product_name', type: 'string', example: 'عسل سدر'),
-                                new OA\Property(property: 'product_id', type: 'integer', example: 1),
-                                new OA\Property(property: 'quantity', type: 'integer', example: 2),
-                            ],
-                            type: 'object'
-                        )
-                    ),
+                    new OA\Property(property: 'items', type: 'string', example: 'عسل سدر 2 عبوة + عسل كشميري 1 عبوة'),
                 ]
             )
         ),
@@ -859,101 +848,36 @@ class AuthController extends Controller
     )]
     public function apiStoreOrder(Request $request): JsonResponse
     {
+        if (is_array($request->input('items'))) {
+            return response()->json([
+                'success' => false,
+                'message' => 'حقل items لازم يكون نص واحد وليس list/array.',
+                'example' => [
+                    'items' => 'عسل سدر 2 عبوة + عسل كشميري 1 عبوة',
+                ],
+            ], 422);
+        }
+
         $validated = $request->validate([
             'customer_name' => ['required', 'string', 'max:255'],
             'delivery_address' => ['required', 'string', 'max:2000'],
             'phone' => ['nullable', 'string', 'max:50'],
             'status' => ['nullable', 'string', 'max:100'],
-            'items' => ['required', 'array', 'min:1'],
-            'items.*.product_name' => ['nullable', 'string', 'max:255'],
-            'items.*.product_id' => ['nullable', 'integer', 'exists:products,id'],
-            'items.*.quantity' => ['required', 'integer', 'min:1', 'max:1000'],
+            'items' => ['required', 'string', 'max:5000'],
         ]);
 
-        $itemRows = array_values($validated['items']);
-        $productIds = collect($itemRows)
-            ->pluck('product_id')
-            ->filter(fn ($id) => $id !== null && $id !== '')
-            ->map(fn ($id) => (int) $id)
-            ->unique()
-            ->values()
-            ->all();
-
-        $products = Product::query()->whereIn('id', $productIds)->get()->keyBy('id');
-        $productsByTitle = Product::query()
-            ->whereIn(
-                'title',
-                collect($itemRows)
-                    ->pluck('product_name')
-                    ->map(fn ($title) => trim((string) $title))
-                    ->filter()
-                    ->unique()
-                    ->values()
-                    ->all()
-            )
-            ->get()
-            ->keyBy(fn (Product $product) => mb_strtolower(trim((string) $product->title)));
-
-        $total = 0.0;
-        $lines = [];
-        foreach ($itemRows as $row) {
-            $productId = isset($row['product_id']) ? (int) $row['product_id'] : null;
-            $productName = trim((string) ($row['product_name'] ?? ''));
-            $quantity = (int) $row['quantity'];
-            $product = $productId ? $products->get($productId) : null;
-
-            if (! $product && $productName !== '') {
-                $product = $productsByTitle->get(mb_strtolower($productName));
-            }
-
-            if (! $product) {
-                continue;
-            }
-
-            $unitPrice = (float) $product->price;
-            $lineTotal = round($unitPrice * $quantity, 2);
-            $total += $lineTotal;
-
-            $lines[] = [
-                'product_id' => $product->id,
-                'product_title' => $product->title,
-                'unit_price' => $unitPrice,
-                'quantity' => $quantity,
-                'line_total' => $lineTotal,
-            ];
-        }
-
-        if ($lines === []) {
-            return response()->json([
-                'success' => false,
-                'message' => 'لا يمكن إنشاء طلب بدون منتجات صالحة.',
-            ], 422);
-        }
-
-        $order = DB::transaction(function () use ($validated, $lines, $total) {
+        $order = DB::transaction(function () use ($validated) {
             $orderNumber = (int) (Order::query()->max('order_number') ?? 0) + 1;
 
-            $order = Order::query()->create([
+            return Order::query()->create([
                 'order_number' => $orderNumber,
                 'customer_name' => $validated['customer_name'],
                 'delivery_address' => trim((string) $validated['delivery_address']),
+                'items_text' => trim((string) $validated['items']),
                 'phone' => trim((string) ($validated['phone'] ?? '')),
                 'status' => $validated['status'] ?? 'قيد المعالجة',
-                'total_amount' => round($total, 2),
+                'total_amount' => 0,
             ]);
-
-            foreach ($lines as $line) {
-                $order->items()->create([
-                    'order_id' => $order->id,
-                    'product_id' => $line['product_id'],
-                    'product_title' => $line['product_title'],
-                    'unit_price' => $line['unit_price'],
-                    'quantity' => $line['quantity'],
-                    'line_total' => $line['line_total'],
-                ]);
-            }
-
-            return $order->fresh('items');
         });
 
         return response()->json([
@@ -1492,6 +1416,13 @@ class AuthController extends Controller
 
     private function transformOrderForApi(Order $order): array
     {
+        $itemsText = trim((string) ($order->items_text ?? ''));
+        if ($itemsText === '' && $order->relationLoaded('items')) {
+            $itemsText = $order->items
+                ->map(fn (OrderItem $item) => $item->product_title.' x'.$item->quantity)
+                ->implode(' + ');
+        }
+
         return [
             'id' => $order->id,
             'order_number' => $order->order_number,
@@ -1499,13 +1430,7 @@ class AuthController extends Controller
             'delivery_address' => $order->delivery_address,
             'status' => $order->status,
             'total_amount' => (float) $order->total_amount,
-            'items' => $order->items->map(fn (OrderItem $item) => [
-                'id' => $item->id,
-                'product_name' => $item->product_title,
-                'price' => (float) $item->unit_price,
-                'count' => (int) $item->quantity,
-                'line_total' => (float) $item->line_total,
-            ])->values()->all(),
+            'items' => $itemsText,
             'created_at' => optional($order->created_at)?->toISOString(),
             'updated_at' => optional($order->updated_at)?->toISOString(),
         ];
