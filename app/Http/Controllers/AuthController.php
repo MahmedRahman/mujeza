@@ -603,6 +603,40 @@ class AuthController extends Controller
     }
 
     #[OA\Get(
+        path: '/api/branches',
+        operationId: 'getBranches',
+        tags: ['Branches'],
+        summary: 'Get branches list',
+        description: 'Returns all branches in one response.',
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Branches fetched successfully',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'success', type: 'boolean', example: true),
+                        new OA\Property(
+                            property: 'data',
+                            type: 'array',
+                            items: new OA\Items(type: 'object')
+                        ),
+                    ]
+                )
+            ),
+        ]
+    )]
+    public function apiBranches(Request $request): JsonResponse
+    {
+        $branches = Branch::query()->latest()->get();
+        $items = $branches->map(fn (Branch $branch) => $this->transformBranchForApi($branch))->values();
+
+        return response()->json([
+            'success' => true,
+            'data' => $items,
+        ]);
+    }
+
+    #[OA\Get(
         path: '/api/complaints',
         operationId: 'getComplaints',
         tags: ['Complaints'],
@@ -1379,6 +1413,22 @@ class AuthController extends Controller
             'phone' => $complaint->phone,
             'created_at' => optional($complaint->created_at)?->toISOString(),
             'updated_at' => optional($complaint->updated_at)?->toISOString(),
+        ];
+    }
+
+    private function transformBranchForApi(Branch $branch): array
+    {
+        return [
+            'id' => $branch->id,
+            'name' => $branch->name,
+            'phone1' => $branch->phone1,
+            'phone2' => $branch->phone2,
+            'address' => $branch->address,
+            'latitude' => $branch->latitude,
+            'longitude' => $branch->longitude,
+            'map_url' => $branch->map_url,
+            'created_at' => optional($branch->created_at)?->toISOString(),
+            'updated_at' => optional($branch->updated_at)?->toISOString(),
         ];
     }
 

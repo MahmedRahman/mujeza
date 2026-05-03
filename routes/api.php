@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/products', [AuthController::class, 'apiProducts'])->name('api.products.index');
 Route::get('/products/search', [AuthController::class, 'apiSearchProducts'])->name('api.products.search');
+Route::get('/branches', [AuthController::class, 'apiBranches'])->name('api.branches.index');
 
 Route::get('/complaints', [AuthController::class, 'apiComplaints'])->name('api.complaints.index');
 Route::post('/complaints', [AuthController::class, 'apiStoreComplaint'])->name('api.complaints.store');
