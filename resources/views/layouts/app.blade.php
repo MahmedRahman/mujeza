@@ -188,8 +188,12 @@
                     <a class="{{ request()->routeIs('categories.*') ? 'active' : '' }}" href="{{ route('categories.index') }}">الفئات</a>
                     <a class="{{ request()->routeIs('diseases.*') ? 'active' : '' }}" href="{{ route('diseases.index') }}">الأمراض</a>
                     <a class="{{ request()->routeIs('conversations.*') ? 'active' : '' }}" href="{{ route('conversations.index') }}">المحادثات</a>
-                    <a class="{{ request()->is('api/documentation*') ? 'active' : '' }}" href="{{ url('/api/documentation') }}" target="_blank" rel="noopener noreferrer">Swagger</a>
-                    <a class="{{ request()->is('telescope*') ? 'active' : '' }}" href="{{ url('/telescope') }}" target="_blank" rel="noopener noreferrer">Laravel Telescope</a>
+                    @php
+                        $appBaseUrl = rtrim((string) config('app.url', url('/')), '/');
+                        $telescopePath = trim((string) config('telescope.path', 'telescope'), '/');
+                    @endphp
+                    <a class="{{ request()->is('api/documentation*') ? 'active' : '' }}" href="{{ $appBaseUrl.'/api/documentation' }}" target="_blank" rel="noopener noreferrer">Swagger</a>
+                    <a class="{{ request()->is('telescope*') ? 'active' : '' }}" href="{{ $appBaseUrl.'/'.($telescopePath !== '' ? $telescopePath : 'telescope') }}" target="_blank" rel="noopener noreferrer">Laravel Telescope</a>
                 </div>
             </nav>
         </aside>
