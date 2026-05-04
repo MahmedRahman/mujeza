@@ -189,6 +189,7 @@
                     <a class="{{ request()->routeIs('diseases.*') ? 'active' : '' }}" href="{{ route('diseases.index') }}">الأمراض</a>
                     <a class="{{ request()->routeIs('conversations.*') ? 'active' : '' }}" href="{{ route('conversations.index') }}">المحادثات</a>
                     <a class="{{ request()->is('api/documentation*') ? 'active' : '' }}" href="{{ url('/api/documentation') }}">Swagger</a>
+                    <a class="{{ request()->is('telescope*') ? 'active' : '' }}" href="{{ url('/telescope') }}">Laravel Telescope</a>
                 </div>
             </nav>
         </aside>
