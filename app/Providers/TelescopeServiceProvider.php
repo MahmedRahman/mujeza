@@ -56,14 +56,26 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
      */
     protected function gate(): void
     {
-        Gate::define('viewTelescope', function (User $user) {
-            $allowedEmails = collect(explode(',', (string) env('TELESCOPE_ALLOWED_EMAILS', 'admin@mujeza.local')))
-                ->map(fn (string $email) => trim($email))
+        Gate::define('viewTelescope', function (?User $user) {
+            if ($this->app->environment('local')) {
+                return true;
+            }
+
+            if (! $user) {
+                return false;
+            }
+
+            $allowedEmails = collect(config('telescope.allowed_emails', []))
+                ->map(fn ($email) => trim((string) $email))
                 ->filter()
                 ->values()
                 ->all();
 
-            return in_array($user->email, $allowedEmails, true);
+            if (in_array('*', $allowedEmails, true)) {
+                return true;
+            }
+
+            return in_array((string) $user->email, $allowedEmails, true);
         });
     }
 }

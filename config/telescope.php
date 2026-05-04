@@ -94,8 +94,24 @@ return [
 
     'middleware' => [
         'web',
+        'auth',
         Authorize::class,
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Allowed Emails (Non-Local)
+    |--------------------------------------------------------------------------
+    |
+    | These emails are allowed to access Telescope in non-local environments.
+    | You can use "*" to allow any authenticated dashboard user.
+    |
+    */
+
+    'allowed_emails' => array_values(array_filter(array_map(
+        fn ($value) => trim((string) $value),
+        explode(',', (string) env('TELESCOPE_ALLOWED_EMAILS', 'admin@mujeza.local'))
+    ))),
 
     /*
     |--------------------------------------------------------------------------
