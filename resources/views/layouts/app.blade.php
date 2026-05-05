@@ -194,6 +194,7 @@
                     @endphp
                     <a class="{{ request()->is('api/documentation*') ? 'active' : '' }}" href="{{ $appBaseUrl.'/api/documentation' }}" target="_blank" rel="noopener noreferrer">Swagger</a>
                     <a class="{{ request()->is('telescope*') ? 'active' : '' }}" href="{{ $appBaseUrl.'/'.($telescopePath !== '' ? $telescopePath : 'telescope') }}" target="_blank" rel="noopener noreferrer">Laravel Telescope</a>
+                    <a href="https://n8n.marketlink.app/" target="_blank" rel="noopener noreferrer">n8n Workflow</a>
                 </div>
             </nav>
         </aside>
