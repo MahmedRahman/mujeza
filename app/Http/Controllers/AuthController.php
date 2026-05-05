@@ -122,7 +122,11 @@ class AuthController extends Controller
             });
         }
 
-        $products = $productsQuery->latest()->get();
+        $filteredProductsCount = (clone $productsQuery)->count();
+        $products = $productsQuery
+            ->latest()
+            ->paginate(10)
+            ->withQueryString();
 
         $totalProductsCount = Product::query()->count();
         $availableProductsCount = Product::query()
@@ -138,7 +142,7 @@ class AuthController extends Controller
             'totalProductsCount' => $totalProductsCount,
             'availableProductsCount' => $availableProductsCount,
             'unavailableProductsCount' => $unavailableProductsCount,
-            'filteredProductsCount' => $products->count(),
+            'filteredProductsCount' => $filteredProductsCount,
         ]);
     }
 

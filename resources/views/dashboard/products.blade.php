@@ -59,7 +59,7 @@
             <p style="margin-bottom: 0; color: #6b7280;">لا توجد منتجات مضافة بعد.</p>
         @else
             <div style="overflow-x: auto;">
-                <table style="width: 100%; border-collapse: collapse; min-width: 920px;">
+                <table style="width: 100%; border-collapse: collapse; min-width: 860px;">
                     <thead>
                         <tr style="background: #f8f2de;">
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align: right;">المنتج</th>
@@ -67,7 +67,6 @@
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align: right;">سعر الخصم</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align: right;">الوصف</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align: right;">معلومات إضافية</th>
-                            <th style="padding: 10px; border: 1px solid #efe3b7; text-align: right;">الصورة</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align: right;">الإجراءات</th>
                         </tr>
                     </thead>
@@ -111,13 +110,6 @@
                                     {{ !empty($meta) ? implode(' | ', $meta) : '—' }}
                                 </td>
                                 <td style="padding: 10px; border: 1px solid #efe3b7;">
-                                    @if ($product->cover_image)
-                                        <img src="{{ asset('storage/' . $product->cover_image) }}" alt="{{ $product->title }}" style="max-width: 72px; border-radius: 8px;">
-                                    @else
-                                        —
-                                    @endif
-                                </td>
-                                <td style="padding: 10px; border: 1px solid #efe3b7;">
                                     <div style="display:flex; gap:8px; flex-wrap:wrap;">
                                         <a href="{{ route('products.edit', $product) }}" style="text-decoration:none; border:1px solid #bfdbfe; background:#eff6ff; color:#1d4ed8; padding:7px 10px; border-radius:8px; font-weight:700;">
                                             تعديل
@@ -135,6 +127,9 @@
                         @endforeach
                     </tbody>
                 </table>
+            </div>
+            <div style="margin-top:14px;">
+                {{ $products->links() }}
             </div>
         @endif
     </section>
