@@ -128,8 +128,39 @@
                     </tbody>
                 </table>
             </div>
-            <div style="margin-top:14px;">
-                {{ $products->links() }}
+            <div style="margin-top:14px; display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+                <div style="font-size:12px; color:#6b7280;">
+                    عرض {{ $products->firstItem() }} - {{ $products->lastItem() }} من {{ $products->total() }}
+                </div>
+                <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                    <a
+                        href="{{ $products->previousPageUrl() ?? '#' }}"
+                        style="text-decoration:none; border:1px solid #d1d5db; background:{{ $products->onFirstPage() ? '#f3f4f6' : '#fff' }}; color:{{ $products->onFirstPage() ? '#9ca3af' : '#111827' }}; padding:6px 10px; border-radius:7px; font-size:12px; font-weight:700; pointer-events:{{ $products->onFirstPage() ? 'none' : 'auto' }};"
+                    >
+                        السابق
+                    </a>
+
+                    @php
+                        $start = max(1, $products->currentPage() - 2);
+                        $end = min($products->lastPage(), $products->currentPage() + 2);
+                    @endphp
+
+                    @for ($page = $start; $page <= $end; $page++)
+                        <a
+                            href="{{ $products->url($page) }}"
+                            style="text-decoration:none; border:1px solid {{ $products->currentPage() === $page ? '#d4af37' : '#d1d5db' }}; background:{{ $products->currentPage() === $page ? '#d4af37' : '#fff' }}; color:{{ $products->currentPage() === $page ? '#111827' : '#374151' }}; padding:6px 10px; min-width:32px; text-align:center; border-radius:7px; font-size:12px; font-weight:800;"
+                        >
+                            {{ $page }}
+                        </a>
+                    @endfor
+
+                    <a
+                        href="{{ $products->nextPageUrl() ?? '#' }}"
+                        style="text-decoration:none; border:1px solid #d1d5db; background:{{ $products->hasMorePages() ? '#fff' : '#f3f4f6' }}; color:{{ $products->hasMorePages() ? '#111827' : '#9ca3af' }}; padding:6px 10px; border-radius:7px; font-size:12px; font-weight:700; pointer-events:{{ $products->hasMorePages() ? 'auto' : 'none' }};"
+                    >
+                        التالي
+                    </a>
+                </div>
             </div>
         @endif
     </section>
