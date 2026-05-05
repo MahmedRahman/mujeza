@@ -9,7 +9,7 @@
 
     #chat-app {
         display: grid;
-        grid-template-columns: 300px 1fr;
+        grid-template-columns: 460px 1fr;
         height: calc(100vh - 112px);
         min-height: 520px;
         background: #fff;
@@ -18,15 +18,15 @@
         overflow: hidden;
     }
 
-    /* ── Sidebar ─────────────────────────────── */
     #chat-sidebar {
         display: flex;
         flex-direction: column;
-        border-left: 1px solid #e5e7eb;
         background: #fff;
         min-height: 0;
+        height: 100%;
         overflow: hidden;
     }
+
     .sidebar-hd {
         padding: 14px 16px;
         background: #f8f2de;
@@ -36,11 +36,18 @@
         justify-content: space-between;
         flex-shrink: 0;
     }
+    .sidebar-hd-right {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
     .sidebar-search {
         padding: 8px 12px;
         border-bottom: 1px solid #f0f0f0;
         flex-shrink: 0;
     }
+
     .sidebar-search input {
         width: 100%;
         border: 1px solid #e5e7eb;
@@ -54,172 +61,253 @@
     }
     .sidebar-search input:focus { border-color: #d4af37; background: #fff; }
 
-    #chats-list { flex: 1; overflow-y: auto; min-height: 0; }
+    #chats-list {
+        flex: 1;
+        overflow-y: auto;
+        min-height: 0;
+        padding: 12px;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        align-content: start;
+    }
     #chats-list::-webkit-scrollbar { width: 4px; }
     #chats-list::-webkit-scrollbar-thumb { background: #d4af37; border-radius: 4px; }
 
-    .chat-row {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 11px 14px;
+    .chat-card {
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 13px 13px 11px;
         cursor: pointer;
-        border-bottom: 1px solid #f5f5f5;
-        transition: background .12s;
+        background: #fff;
+        transition: border-color .12s, box-shadow .12s, transform .12s;
+        min-width: 0;
     }
-    .chat-row:hover { background: #fffcf2; }
-    .chat-row.active { background: #fff8e1; border-right: 3px solid #d4af37; }
-    .chat-avatar {
-        width: 42px; height: 42px;
-        border-radius: 50%;
-        background: #d4af37;
-        display: flex; align-items: center; justify-content: center;
-        font-weight: 800; font-size: 17px; color: #111;
-        flex-shrink: 0;
-    }
-    .chat-row-info { flex: 1; min-width: 0; }
-    .chat-row-name {
-        font-weight: 700; font-size: 13px;
-        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-        color: #111827;
-    }
-    .chat-row-preview {
-        font-size: 11px; color: #9ca3af;
-        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-        margin-top: 2px;
+    .chat-card.active {
+        border-color: #d4af37;
+        box-shadow: 0 0 0 2px rgba(212, 175, 55, .20);
+        background: #fffcf2;
     }
 
-    /* ── Main ──────────────────────────────────── */
+    .chat-card:hover {
+        border-color: #d4af37;
+        box-shadow: 0 6px 16px rgba(17, 24, 39, .08);
+        transform: translateY(-1px);
+    }
+
+    .chat-card-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 8px;
+    }
+
+    .chat-card-name {
+        font-weight: 700;
+        font-size: 15px;
+        line-height: 1.35;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        color: #0f172a;
+    }
+
+    .chat-card-phone {
+        margin-top: 6px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #1f2937;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 999px;
+        padding: 4px 10px;
+    }
+
+    .chat-card-date {
+        font-size: 10px;
+        color: #9ca3af;
+        flex-shrink: 0;
+        white-space: nowrap;
+    }
+
+    .chat-card-preview {
+        font-size: 11px;
+        color: #9ca3af;
+        margin-top: 8px;
+        line-height: 1.4;
+        min-height: 30px;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .chat-card-footer {
+        margin-top: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+    }
+    .switch-wrap {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 11px;
+        color: #6b7280;
+        user-select: none;
+    }
+    .switch {
+        position: relative;
+        width: 38px;
+        height: 22px;
+        display: inline-block;
+    }
+    .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+    .switch-slider {
+        position: absolute;
+        inset: 0;
+        background: #d1d5db;
+        border-radius: 999px;
+        transition: .18s;
+    }
+    .switch-slider::before {
+        content: '';
+        position: absolute;
+        width: 16px;
+        height: 16px;
+        left: 3px;
+        top: 3px;
+        border-radius: 50%;
+        background: #fff;
+        box-shadow: 0 1px 2px rgba(0,0,0,.15);
+        transition: .18s;
+    }
+    .switch input:checked + .switch-slider {
+        background: #16a34a;
+    }
+    .switch input:checked + .switch-slider::before {
+        transform: translateX(16px);
+    }
+    .switch input:disabled + .switch-slider {
+        opacity: .6;
+        cursor: not-allowed;
+    }
+
     #chat-main {
         display: flex;
         flex-direction: column;
         min-height: 0;
-        overflow: hidden;
+        border-right: 1px solid #e5e7eb;
         background: #f9fafb;
     }
-    #chat-header {
-        padding: 12px 18px;
-        background: #fff;
+    #chat-main-header {
+        padding: 13px 16px;
         border-bottom: 1px solid #e5e7eb;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        flex-shrink: 0;
-    }
-
-    /* ── Messages ───────────────────────────────── */
-    #messages-area {
-        flex: 1;
-        overflow-y: auto;
-        min-height: 0;
-        padding: 20px 16px;
+        background: #fff;
         display: flex;
         flex-direction: column;
-        gap: 6px;
-        /* LTR so flex-end = right, flex-start = left */
-        direction: ltr;
+        gap: 3px;
+        flex-shrink: 0;
     }
-    #messages-area::-webkit-scrollbar { width: 4px; }
-    #messages-area::-webkit-scrollbar-thumb { background: #d4af37; border-radius: 4px; }
-
-    .msg-row { display: flex; width: 100%; }
-    .msg-row.sent  { justify-content: flex-end;   }
-    .msg-row.recv  { justify-content: flex-start;  }
-
-    .msg-bubble {
-        max-width: 68%;
-        padding: 9px 13px 6px;
+    #chat-main-title {
         font-size: 14px;
-        line-height: 1.55;
+        font-weight: 800;
+        color: #111827;
+    }
+    #chat-main-subtitle {
+        font-size: 12px;
+        color: #6b7280;
+    }
+    #messages-area {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    .msg-row {
+        display: flex;
+        width: 100%;
+    }
+    .msg-row.sent { justify-content: flex-end; }
+    .msg-row.recv { justify-content: flex-start; }
+    .msg-bubble {
+        max-width: 74%;
+        border-radius: 14px;
+        padding: 9px 12px 7px;
+        font-size: 13px;
+        line-height: 1.45;
         word-break: break-word;
         white-space: pre-wrap;
-        direction: rtl;
-        text-align: right;
     }
     .msg-bubble.sent {
         background: #d4af37;
         color: #111;
-        border-radius: 16px 16px 3px 16px;
-        box-shadow: 0 1px 3px rgba(0,0,0,.08);
+        border-bottom-right-radius: 4px;
     }
     .msg-bubble.recv {
-        background: #ffffff;
+        background: #fff;
         color: #1f2937;
-        border-radius: 16px 16px 16px 3px;
-        box-shadow: 0 1px 3px rgba(0,0,0,.08);
         border: 1px solid #e5e7eb;
+        border-bottom-left-radius: 4px;
     }
     .msg-time {
-        font-size: 10px;
         margin-top: 4px;
+        font-size: 10px;
+        color: #6b7280;
+        text-align: left;
         direction: ltr;
-        text-align: right;
     }
-    .msg-bubble.sent  .msg-time { color: #7c6a0e; }
-    .msg-bubble.recv  .msg-time { color: #9ca3af; }
-
-    /* date separator */
     .date-sep {
-        text-align: center;
+        align-self: center;
+        padding: 3px 9px;
+        border-radius: 999px;
         font-size: 11px;
-        color: #9ca3af;
-        margin: 8px 0 4px;
-        direction: rtl;
+        color: #6b7280;
+        background: #eef2f7;
+        margin: 2px 0;
     }
 
-    /* ── Input ───────────────────────────────────── */
-    #msg-bar {
-        padding: 10px 14px;
-        background: #fff;
-        border-top: 1px solid #e5e7eb;
-        display: flex;
-        gap: 8px;
-        align-items: flex-end;
-        flex-shrink: 0;
+    @media (max-width: 1180px) {
+        #chat-app { grid-template-columns: 400px 1fr; }
+        #chats-list { grid-template-columns: 1fr; }
     }
-    #msg-input {
-        flex: 1;
-        border: 1px solid #e5e7eb;
-        border-radius: 22px;
-        padding: 9px 16px;
-        font-family: inherit;
-        font-size: 14px;
-        resize: none;
-        max-height: 100px;
-        line-height: 1.5;
-        box-sizing: border-box;
-        outline: none;
-        direction: rtl;
-        background: #f9fafb;
-        transition: border .15s;
+    @media (max-width: 900px) {
+        #chat-app { grid-template-columns: 1fr; }
+        #chat-main { min-height: 420px; border-right: 0; border-top: 1px solid #e5e7eb; }
     }
-    #msg-input:focus { border-color: #d4af37; background: #fff; }
-    #send-btn {
-        border: none;
-        background: #d4af37;
-        color: #111;
-        width: 42px; height: 42px;
-        border-radius: 50%;
-        font-size: 18px;
-        cursor: pointer;
-        display: flex; align-items: center; justify-content: center;
-        flex-shrink: 0;
-        transition: background .15s;
-    }
-    #send-btn:hover { background: #c9a22a; }
-    #send-btn:disabled { background: #e5e7eb; color: #9ca3af; cursor: default; }
 </style>
 
 <div id="chat-app">
-
-    {{-- ══ Sidebar ══ --}}
     <div id="chat-sidebar">
         <div class="sidebar-hd">
             <div style="display:flex;align-items:center;gap:8px;">
                 <span style="font-size:18px;">💬</span>
                 <span style="font-weight:800;font-size:14px;">المحادثات</span>
             </div>
-            <span id="status-badge" style="font-size:11px;padding:3px 10px;border-radius:20px;font-weight:700;background:#f3f4f6;color:#9ca3af;">...</span>
+            <div class="sidebar-hd-right">
+                <label class="switch-wrap" title="تشغيل/إيقاف الرد الآلي لكل المحادثات">
+                    <span id="global-auto-reply-label">الرد الآلي: متوقف</span>
+                    <span class="switch">
+                        <input id="global-auto-reply-toggle" type="checkbox" onchange="toggleGlobalAutoReply(this)">
+                        <span class="switch-slider"></span>
+                    </span>
+                </label>
+                <span id="status-badge" style="font-size:11px;padding:3px 10px;border-radius:20px;font-weight:700;background:#f3f4f6;color:#9ca3af;">...</span>
+            </div>
         </div>
 
         <div class="sidebar-search">
@@ -227,53 +315,34 @@
         </div>
 
         <div id="chats-list">
-            <div style="text-align:center;padding:40px 10px;color:#9ca3af;font-size:13px;">جاري التحميل...</div>
+            <div style="grid-column:1/-1;text-align:center;padding:40px 10px;color:#9ca3af;font-size:13px;">جاري التحميل...</div>
         </div>
     </div>
 
-    {{-- ══ Main ══ --}}
     <div id="chat-main">
-
-        <div id="chat-header">
-            <div id="chat-avatar" style="width:42px;height:42px;border-radius:50%;background:#d4af37;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;color:#111;flex-shrink:0;">
-                💬
-            </div>
-            <div style="min-width:0;flex:1;">
-                <div id="chat-name" style="font-weight:800;font-size:15px;color:#111827;">اختر محادثة</div>
-                <div id="chat-phone" style="font-size:11px;color:#6b7280;margin-top:1px;"></div>
-            </div>
-            <div id="chat-typing" style="font-size:12px;color:#16a34a;display:none;">يكتب...</div>
+        <div id="chat-main-header">
+            <div id="chat-main-title">اختر محادثة</div>
+            <div id="chat-main-subtitle">اضغط على أي كارد لعرض الرسائل</div>
         </div>
-
         <div id="messages-area">
-            <div style="margin:auto;text-align:center;color:#9ca3af;font-size:14px;direction:rtl;">
-                👈 اختر محادثة لعرض الرسائل
-            </div>
-        </div>
-
-        <div id="msg-bar">
-            <button onclick="sendMessage()" id="send-btn" title="إرسال">➤</button>
-            <textarea id="msg-input" placeholder="اكتب رسالة..." rows="1"
-                oninput="autoResize(this)" onkeydown="handleEnter(event)"></textarea>
+            <div style="margin:auto;text-align:center;color:#9ca3af;font-size:13px;">لا توجد محادثة محددة</div>
         </div>
     </div>
 </div>
 
 <script>
-let currentChatId   = null;
-let currentChatName = '';
-let allChats        = [];
-let pollTimer       = null;
-let lastMessageId   = null;
-let lastCount       = 0;
+let allChats = [];
+let globalAutoReplyEnabled = false;
+let currentChatId = null;
+let pollTimer = null;
+let lastMessageSignature = '';
 
-// ── Bootstrap ──────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
     checkStatus();
+    loadAutoReplySettings();
     loadChats();
 });
 
-// ── Connection status ──────────────────────────────────────────────────────
 async function checkStatus() {
     try {
         const r = await fetch('{{ route("whatsapp.status") }}');
@@ -281,192 +350,302 @@ async function checkStatus() {
         const b = document.getElementById('status-badge');
         if (d.connected) {
             b.style.cssText = 'font-size:11px;padding:3px 10px;border-radius:20px;font-weight:700;background:#dcfce7;color:#166534;';
-            b.textContent   = '● متصل';
+            b.textContent = '● متصل';
         } else {
             b.style.cssText = 'font-size:11px;padding:3px 10px;border-radius:20px;font-weight:700;background:#fee2e2;color:#991b1b;';
-            b.textContent   = '● غير متصل';
+            b.textContent = '● غير متصل';
         }
-    } catch(e) {}
+    } catch (e) {}
 }
 
-// ── Load chats list ────────────────────────────────────────────────────────
 async function loadChats() {
     try {
         const r = await fetch('{{ route("whatsapp.chats") }}');
-        if (!r.ok) { showChatsError('تعذر تحميل المحادثات'); return; }
+        if (!r.ok) {
+            showChatsError('تعذر تحميل المحادثات');
+            return;
+        }
         allChats = await r.json();
-        renderChats(allChats);
-    } catch(e) { showChatsError('خطأ في الاتصال'); }
+        renderCurrentList();
+        if (currentChatId) {
+            const selected = getChatById(currentChatId);
+            if (selected) {
+                renderChatHeader(selected);
+            } else {
+                currentChatId = null;
+                clearInterval(pollTimer);
+                document.getElementById('chat-main-title').textContent = 'اختر محادثة';
+                document.getElementById('chat-main-subtitle').textContent = 'اضغط على أي كارد لعرض الرسائل';
+                document.getElementById('messages-area').innerHTML = '<div style="margin:auto;text-align:center;color:#9ca3af;font-size:13px;">لا توجد محادثة محددة</div>';
+            }
+        }
+    } catch (e) {
+        showChatsError('خطأ في الاتصال');
+    }
+}
+
+async function loadAutoReplySettings() {
+    try {
+        const r = await fetch('{{ route("whatsapp.auto_reply.settings") }}');
+        if (!r.ok) return;
+        const data = await r.json();
+        globalAutoReplyEnabled = Boolean(data.global_enabled);
+        renderGlobalAutoReplyState();
+    } catch (e) {}
 }
 
 function renderChats(chats) {
     const el = document.getElementById('chats-list');
     if (!chats.length) {
-        el.innerHTML = '<div style="text-align:center;padding:40px 10px;color:#9ca3af;font-size:13px;">لا توجد محادثات</div>';
+        el.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px 10px;color:#9ca3af;font-size:13px;">لا توجد محادثات</div>';
         return;
     }
+
     el.innerHTML = chats.map(c => {
-        const active  = currentChatId === c.id ? ' active' : '';
-        const initials = esc(c.name).charAt(0).toUpperCase();
-        return `<div class="chat-row${active}" data-id="${esc(c.id)}" onclick="openChat('${esc(c.id)}','${esc(c.name)}')">
-            <div class="chat-avatar">${initials}</div>
-            <div class="chat-row-info">
-                <div class="chat-row-name">${esc(c.name)}</div>
-                <div class="chat-row-preview">${esc(c.last_message)}</div>
+        const phone = getChatPhone(c);
+        const safeName = esc(c.name || 'بدون اسم');
+        const safePhone = esc(phone);
+        const phonePrefix = phone === 'غير متاح' ? '' : '📞 ';
+        const safeDate = esc(formatChatDate(c.timestamp));
+        const isActive = currentChatId === c.id ? ' active' : '';
+        return `<div class="chat-card${isActive}" data-chat-id="${esc(c.id)}" onclick="openChat(this.dataset.chatId)">
+            <div class="chat-card-top">
+                <div style="min-width:0;">
+                    <div class="chat-card-name">${safeName}</div>
+                    <div class="chat-card-phone">${phonePrefix}${safePhone}</div>
+                </div>
+                <span class="chat-card-date">${safeDate}</span>
             </div>
-            ${c.unread > 0 ? `<span style="background:#d4af37;color:#111;border-radius:12px;padding:1px 7px;font-size:11px;font-weight:700;flex-shrink:0;">${c.unread}</span>` : ''}
+            <div class="chat-card-preview">${esc(c.last_message)}</div>
+            <div class="chat-card-footer">
+                <label class="switch-wrap" title="تشغيل الرد الآلي لهذا الرقم فقط" onclick="event.stopPropagation()">
+                    <span>${c.auto_reply_enabled ? 'مفعل' : 'متوقف'}</span>
+                    <span class="switch">
+                        <input type="checkbox" data-chat-id="${esc(c.id)}" ${c.auto_reply_enabled ? 'checked' : ''} onchange="toggleChatAutoReply(event)" onclick="event.stopPropagation()">
+                        <span class="switch-slider"></span>
+                    </span>
+                </label>
+                ${c.unread > 0 ? `<span style="background:#d4af37;color:#111;border-radius:12px;padding:1px 7px;font-size:11px;font-weight:700;flex-shrink:0;">${c.unread}</span>` : ''}
+            </div>
         </div>`;
     }).join('');
 }
 
 function showChatsError(msg) {
     document.getElementById('chats-list').innerHTML =
-        `<div style="text-align:center;padding:24px 12px;">
+        `<div style="grid-column:1/-1;text-align:center;padding:24px 12px;">
             <div style="color:#dc2626;font-weight:700;margin-bottom:8px;">⚠ ${esc(msg)}</div>
             <a href="{{ route('settings.index') }}" style="font-size:12px;color:#1d4ed8;">الإعدادات</a>
          </div>`;
 }
 
 function filterChats() {
-    const q = document.getElementById('search-input').value.toLowerCase();
-    renderChats(allChats.filter(c =>
-        c.name.toLowerCase().includes(q) || c.id.toLowerCase().includes(q)
-    ));
+    renderCurrentList();
 }
 
-// ── Open a chat ────────────────────────────────────────────────────────────
-async function openChat(id, name) {
-    currentChatId   = id;
-    currentChatName = name;
-    lastMessageId   = null;
-    lastCount       = 0;
+function renderGlobalAutoReplyState() {
+    const input = document.getElementById('global-auto-reply-toggle');
+    const label = document.getElementById('global-auto-reply-label');
+    if (!input || !label) return;
+    input.checked = globalAutoReplyEnabled;
+    label.textContent = globalAutoReplyEnabled ? 'الرد الآلي: مفعل' : 'الرد الآلي: متوقف';
+}
 
-    document.getElementById('chat-name').textContent  = name;
-    document.getElementById('chat-phone').textContent = id.replace(/@.+/, '');
-    document.getElementById('chat-avatar').textContent = name.charAt(0).toUpperCase();
+async function toggleGlobalAutoReply(el) {
+    const nextValue = Boolean(el.checked);
+    const prevValue = globalAutoReplyEnabled;
+    el.disabled = true;
 
-    document.querySelectorAll('.chat-row').forEach(el => el.classList.remove('active'));
-    const row = document.querySelector(`.chat-row[data-id="${CSS.escape(id)}"]`);
-    if (row) row.classList.add('active');
+    try {
+        const r = await fetch('{{ route("whatsapp.auto_reply.global") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            },
+            body: JSON.stringify({ enabled: nextValue }),
+        });
 
-    document.getElementById('messages-area').innerHTML =
-        '<div style="margin:auto;text-align:center;color:#9ca3af;font-size:13px;direction:rtl;">جاري تحميل الرسائل...</div>';
+        if (!r.ok) {
+            throw new Error('request_failed');
+        }
 
-    await loadMessages();
+        globalAutoReplyEnabled = nextValue;
+        renderGlobalAutoReplyState();
+        await loadChats();
+    } catch (e) {
+        globalAutoReplyEnabled = prevValue;
+        renderGlobalAutoReplyState();
+        alert('تعذر تحديث حالة الرد الآلي العامة.');
+    } finally {
+        el.disabled = false;
+    }
+}
+
+async function toggleChatAutoReply(event) {
+    const input = event.target;
+    const chatId = String(input.dataset.chatId ?? '');
+    if (!chatId) return;
+
+    const nextValue = Boolean(input.checked);
+    const prevValue = !nextValue;
+    input.disabled = true;
+
+    try {
+        const r = await fetch('{{ route("whatsapp.auto_reply.chat") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            },
+            body: JSON.stringify({ chat_id: chatId, enabled: nextValue }),
+        });
+
+        if (!r.ok) {
+            throw new Error('request_failed');
+        }
+
+        allChats = allChats.map(c => c.id === chatId ? { ...c, auto_reply_enabled: nextValue, auto_reply_overridden: true } : c);
+        renderCurrentList();
+    } catch (e) {
+        input.checked = prevValue;
+        alert('تعذر تحديث حالة الرد الآلي لهذا الرقم.');
+    } finally {
+        input.disabled = false;
+    }
+}
+
+function renderCurrentList() {
+    const q = document.getElementById('search-input').value.toLowerCase();
+    const filtered = allChats.filter(c =>
+        String(c.name ?? '').toLowerCase().includes(q)
+        || String(c.id ?? '').toLowerCase().includes(q)
+        || getChatPhone(c).toLowerCase().includes(q)
+    );
+    renderChats(filtered);
+}
+
+function getChatById(chatId) {
+    return allChats.find(c => c.id === chatId) || null;
+}
+
+function openChat(chatId) {
+    const chat = getChatById(chatId);
+    if (!chat) return;
+
+    currentChatId = chatId;
+    renderCurrentList();
+    renderChatHeader(chat);
+    loadMessages(true);
 
     clearInterval(pollTimer);
-    pollTimer = setInterval(loadMessages, 3000);
+    pollTimer = setInterval(() => loadMessages(false), 4000);
 }
 
-// ── Load / poll messages ───────────────────────────────────────────────────
-async function loadMessages() {
+function renderChatHeader(chat) {
+    const phone = getChatPhone(chat);
+    document.getElementById('chat-main-title').textContent = String(chat.name || 'عميل واتساب');
+    document.getElementById('chat-main-subtitle').textContent = phone === 'غير متاح'
+        ? 'رقم الهاتف غير متاح'
+        : `📞 ${phone}`;
+}
+
+async function loadMessages(forceRefresh) {
     if (!currentChatId) return;
+    const area = document.getElementById('messages-area');
+
+    if (forceRefresh) {
+        area.innerHTML = '<div style="margin:auto;text-align:center;color:#9ca3af;font-size:13px;">جاري تحميل الرسائل...</div>';
+    }
+
     try {
         const r = await fetch(`{{ route('whatsapp.messages') }}?chat_id=${encodeURIComponent(currentChatId)}`);
         if (!r.ok) return;
         const msgs = await r.json();
+        const signature = `${msgs.length}:${msgs[msgs.length - 1]?.id ?? ''}`;
+
+        if (!forceRefresh && signature === lastMessageSignature) {
+            return;
+        }
+
+        lastMessageSignature = signature;
         renderMessages(msgs);
-    } catch(e) {}
+    } catch (e) {}
 }
 
-// ── Render messages ────────────────────────────────────────────────────────
 function renderMessages(msgs) {
     const area = document.getElementById('messages-area');
-
-    if (!msgs.length) {
-        area.innerHTML = '<div style="margin:auto;text-align:center;color:#9ca3af;font-size:13px;direction:rtl;">لا توجد رسائل بعد</div>';
-        lastCount = 0; lastMessageId = null;
+    if (!Array.isArray(msgs) || msgs.length === 0) {
+        area.innerHTML = '<div style="margin:auto;text-align:center;color:#9ca3af;font-size:13px;">لا توجد رسائل في هذه المحادثة</div>';
         return;
     }
 
-    const newestId = msgs[msgs.length - 1]?.id;
-    if (msgs.length === lastCount && newestId === lastMessageId) return;
-    lastCount     = msgs.length;
-    lastMessageId = newestId;
+    const sortedMessages = [...msgs].sort((a, b) => {
+        const tsA = Number(a?.timestamp ?? 0);
+        const tsB = Number(b?.timestamp ?? 0);
+        if (tsA !== tsB) return tsA - tsB;
+        return String(a?.id ?? '').localeCompare(String(b?.id ?? ''));
+    });
 
     let html = '';
     let lastDate = '';
-
-    msgs.forEach(m => {
-        const dateStr = formatDate(m.timestamp);
-        if (dateStr !== lastDate) {
-            html += `<div class="date-sep">${dateStr}</div>`;
-            lastDate = dateStr;
+    for (const m of sortedMessages) {
+        const dateLabel = formatDateLabel(m.timestamp);
+        if (dateLabel !== lastDate) {
+            html += `<div class="date-sep">${esc(dateLabel)}</div>`;
+            lastDate = dateLabel;
         }
 
-        const cls    = m.from_me ? 'sent' : 'recv';
-        const tick   = m.from_me ? '<span style="color:#7c6a0e;">✓✓</span> ' : '';
-
+        const cls = m.from_me ? 'sent' : 'recv';
         html += `<div class="msg-row ${cls}">
             <div class="msg-bubble ${cls}">
-                ${esc(m.text)}
-                <div class="msg-time">${tick}${formatTime(m.timestamp)}</div>
+                ${esc(m.text || '')}
+                <div class="msg-time">${esc(formatMessageTime(m.timestamp))}</div>
             </div>
         </div>`;
-    });
+    }
 
     area.innerHTML = html;
     area.scrollTop = area.scrollHeight;
 }
 
-// ── Send message ───────────────────────────────────────────────────────────
-async function sendMessage() {
-    if (!currentChatId) return;
-    const input = document.getElementById('msg-input');
-    const text  = input.value.trim();
-    if (!text) return;
-
-    const btn = document.getElementById('send-btn');
-    btn.disabled = true;
-
-    try {
-        const r = await fetch('{{ route("whatsapp.send") }}', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
-            body: JSON.stringify({ chat_id: currentChatId, text })
-        });
-
-        if (r.ok) {
-            input.value = '';
-            input.style.height = 'auto';
-            lastCount = 0; lastMessageId = null; // force re-render
-            setTimeout(loadMessages, 800);
-        } else {
-            const err = await r.json();
-            alert('خطأ: ' + (err.error ?? 'فشل الإرسال'));
-        }
-    } catch(e) { alert('خطأ في الاتصال'); }
-
-    btn.disabled = false;
-}
-
-// ── Helpers ────────────────────────────────────────────────────────────────
-function handleEnter(e) {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
-}
-
-function autoResize(el) {
-    el.style.height = 'auto';
-    el.style.height = Math.min(el.scrollHeight, 100) + 'px';
-}
-
 function esc(str) {
-    return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
 }
 
-function formatTime(ts) {
+function getChatPhone(chat) {
+    const apiPhone = String(chat?.phone ?? '').trim();
+    if (apiPhone) return apiPhone;
+    return 'غير متاح';
+}
+
+function formatChatDate(ts) {
+    if (!ts) return '';
+    const d = new Date(ts * 1000);
+    const now = new Date();
+    if (d.toDateString() === now.toDateString()) {
+        return d.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+    }
+    return d.toLocaleDateString('ar-EG', { day: 'numeric', month: 'numeric' });
+}
+
+function formatMessageTime(ts) {
     if (!ts) return '';
     return new Date(ts * 1000).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
 }
 
-function formatDate(ts) {
+function formatDateLabel(ts) {
     if (!ts) return '';
-    const d    = new Date(ts * 1000);
-    const now  = new Date();
+    const d = new Date(ts * 1000);
+    const now = new Date();
     const diff = Math.floor((now - d) / 86400000);
     if (diff === 0) return 'اليوم';
     if (diff === 1) return 'أمس';
-    return d.toLocaleDateString('ar-EG', { day: 'numeric', month: 'long', year: 'numeric' });
+    return d.toLocaleDateString('ar-EG', { day: 'numeric', month: 'long' });
 }
 </script>
 @endsection

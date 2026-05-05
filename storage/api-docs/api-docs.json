@@ -113,6 +113,40 @@
                 }
             }
         },
+        "/api/branches": {
+            "get": {
+                "tags": [
+                    "Branches"
+                ],
+                "summary": "Get branches list",
+                "description": "Returns all branches in one response.",
+                "operationId": "getBranches",
+                "responses": {
+                    "200": {
+                        "description": "Branches fetched successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/complaints": {
             "get": {
                 "tags": [
@@ -290,7 +324,7 @@
                     "Orders"
                 ],
                 "summary": "Create order",
-                "description": "Creates a new order with one or more items. Prices are calculated automatically from products table.",
+                "description": "Creates a new order. The items field must be a single text value describing requested products.",
                 "operationId": "storeOrder",
                 "requestBody": {
                     "required": true,
@@ -299,13 +333,17 @@
                             "schema": {
                                 "required": [
                                     "customer_name",
-                                    "phone",
+                                    "delivery_address",
                                     "items"
                                 ],
                                 "properties": {
                                     "customer_name": {
                                         "type": "string",
                                         "example": "محمد أحمد"
+                                    },
+                                    "delivery_address": {
+                                        "type": "string",
+                                        "example": "الكويت - حولي - شارع بيروت - قطعة 4 - منزل 12"
                                     },
                                     "phone": {
                                         "type": "string",
@@ -316,20 +354,8 @@
                                         "example": "قيد المعالجة"
                                     },
                                     "items": {
-                                        "type": "array",
-                                        "items": {
-                                            "properties": {
-                                                "product_id": {
-                                                    "type": "integer",
-                                                    "example": 1
-                                                },
-                                                "quantity": {
-                                                    "type": "integer",
-                                                    "example": 2
-                                                }
-                                            },
-                                            "type": "object"
-                                        }
+                                        "type": "string",
+                                        "example": "عسل سدر 2 عبوة + عسل كشميري 1 عبوة"
                                     }
                                 },
                                 "type": "object"
@@ -352,15 +378,35 @@
                 "tags": [
                     "Orders"
                 ],
-                "summary": "Get order status by phone number",
-                "description": "Returns latest order status and all orders for the provided phone number.",
+                "summary": "Get order status",
+                "description": "Returns latest order status and all matching orders by order_number or customer_name or phone.",
                 "operationId": "getOrderStatusByPhone",
                 "parameters": [
                     {
+                        "name": "order_number",
+                        "in": "query",
+                        "description": "Order number (preferred)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1024
+                        }
+                    },
+                    {
+                        "name": "customer_name",
+                        "in": "query",
+                        "description": "Customer name",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "محمد أحمد"
+                        }
+                    },
+                    {
                         "name": "phone",
                         "in": "query",
-                        "description": "Customer phone number",
-                        "required": true,
+                        "description": "Customer phone number (optional fallback)",
+                        "required": false,
                         "schema": {
                             "type": "string",
                             "example": "96550000000"
@@ -376,6 +422,155 @@
                     }
                 }
             }
+        },
+        "/whatsapp/auto-reply/numbers": {
+            "get": {
+                "tags": [
+                    "WhatsApp"
+                ],
+                "summary": "Get chats numbers with auto-reply state",
+                "description": "Returns chats list (number/name) and whether auto-reply is allowed per chat, plus global toggle state.",
+                "operationId": "whatsappAutoReplyNumbers",
+                "responses": {
+                    "200": {
+                        "description": "Auto-reply numbers list fetched successfully"
+                    },
+                    "422": {
+                        "description": "Evolution API is not configured"
+                    }
+                }
+            }
+        },
+        "/whatsapp/auto-reply/number-status": {
+            "get": {
+                "tags": [
+                    "WhatsApp"
+                ],
+                "summary": "Get auto-reply status for single chat/phone",
+                "description": "Checks whether auto-reply is allowed for a specific chat_id or phone, considering global + override values.",
+                "operationId": "whatsappAutoReplyNumberStatus",
+                "parameters": [
+                    {
+                        "name": "chat_id",
+                        "in": "query",
+                        "description": "WhatsApp chat JID (optional if phone is provided)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "201011223344@s.whatsapp.net"
+                        }
+                    },
+                    {
+                        "name": "phone",
+                        "in": "query",
+                        "description": "Phone number in local or international format (optional if chat_id is provided)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "201011223344"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Auto-reply status evaluated successfully"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/whatsapp/auto-reply/settings": {
+            "get": {
+                "tags": [
+                    "WhatsApp"
+                ],
+                "summary": "Get global auto-reply setting",
+                "operationId": "whatsappAutoReplySettings",
+                "responses": {
+                    "200": {
+                        "description": "Global auto-reply setting fetched successfully"
+                    }
+                }
+            }
+        },
+        "/whatsapp/auto-reply/global": {
+            "post": {
+                "tags": [
+                    "WhatsApp"
+                ],
+                "summary": "Enable or disable global auto-reply",
+                "operationId": "whatsappUpdateGlobalAutoReply",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "enabled"
+                                ],
+                                "properties": {
+                                    "enabled": {
+                                        "type": "boolean",
+                                        "example": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Global auto-reply updated successfully"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/whatsapp/auto-reply/chat": {
+            "post": {
+                "tags": [
+                    "WhatsApp"
+                ],
+                "summary": "Enable or disable auto-reply for specific chat",
+                "operationId": "whatsappUpdateChatAutoReply",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "chat_id",
+                                    "enabled"
+                                ],
+                                "properties": {
+                                    "chat_id": {
+                                        "type": "string",
+                                        "example": "201011223344@s.whatsapp.net"
+                                    },
+                                    "enabled": {
+                                        "type": "boolean",
+                                        "example": false
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Per-chat auto-reply override updated successfully"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
         }
     },
     "tags": [
@@ -384,12 +579,20 @@
             "description": "Products"
         },
         {
+            "name": "Branches",
+            "description": "Branches"
+        },
+        {
             "name": "Complaints",
             "description": "Complaints"
         },
         {
             "name": "Orders",
             "description": "Orders"
+        },
+        {
+            "name": "WhatsApp",
+            "description": "WhatsApp"
         }
     ]
 }

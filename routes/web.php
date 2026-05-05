@@ -60,6 +60,11 @@ Route::middleware('auth')->group(function () {
     Route::prefix('whatsapp')->name('whatsapp.')->group(function () {
         Route::get('/status', [WhatsAppController::class, 'status'])->name('status');
         Route::get('/chats', [WhatsAppController::class, 'chats'])->name('chats');
+        Route::get('/auto-reply/numbers', [WhatsAppController::class, 'autoReplyNumbers'])->name('auto_reply.numbers');
+        Route::get('/auto-reply/number-status', [WhatsAppController::class, 'autoReplyNumberStatus'])->name('auto_reply.number_status');
+        Route::get('/auto-reply/settings', [WhatsAppController::class, 'autoReplySettings'])->name('auto_reply.settings');
+        Route::post('/auto-reply/global', [WhatsAppController::class, 'updateGlobalAutoReply'])->name('auto_reply.global');
+        Route::post('/auto-reply/chat', [WhatsAppController::class, 'updateChatAutoReply'])->name('auto_reply.chat');
         Route::get('/messages', [WhatsAppController::class, 'messages'])->name('messages');
         Route::post('/send', [WhatsAppController::class, 'send'])->name('send');
         Route::get('/debug', [WhatsAppController::class, 'debug'])->name('debug');
