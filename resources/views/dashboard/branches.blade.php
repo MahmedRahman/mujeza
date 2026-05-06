@@ -64,6 +64,13 @@
                                     </div>
                                 @endif
 
+                                @if ($branch->working_hours)
+                                    <div style="margin-bottom: 8px; color:#374151;">
+                                        <div style="font-weight:800; margin-bottom:4px;">مواعيد الفرع:</div>
+                                        <div style="margin-top:4px; white-space:pre-wrap;">{{ $branch->working_hours }}</div>
+                                    </div>
+                                @endif
+
                                 <div style="display:flex; gap:8px; align-items:center; margin-top:6px; flex-wrap:wrap;">
                                     @if ($mapSrc)
                                         @if ($branch->latitude !== null && $branch->longitude !== null)

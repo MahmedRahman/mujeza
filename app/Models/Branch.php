@@ -14,6 +14,7 @@ class Branch extends Model
         'latitude',
         'longitude',
         'map_url',
+        'working_hours',
     ];
 
     protected $casts = [

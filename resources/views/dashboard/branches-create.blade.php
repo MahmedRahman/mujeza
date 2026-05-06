@@ -58,6 +58,12 @@
                 <input name="map_url" type="text" value="{{ old('map_url') }}" placeholder="مثال: https://www.google.com/maps?...&output=embed" style="width:100%; border:1px solid #d1d5db; border-radius:8px; padding:10px; font-family:inherit;">
             </div>
 
+            <h3 style="margin: 20px 0 10px; font-weight: 800;">مواعيد الفرع</h3>
+            <div style="margin-bottom: 12px;">
+                <label style="display:block; margin-bottom:6px; font-weight:700;">مواعيد العمل</label>
+                <textarea name="working_hours" rows="3" placeholder="مثال: يوميًا من 9:00 ص إلى 10:00 م ماعدا الجمعة" style="width:100%; border:1px solid #d1d5db; border-radius:8px; padding:10px; font-family:inherit;">{{ old('working_hours') }}</textarea>
+            </div>
+
             <button type="submit" style="border:none; background:#d4af37; color:#111827; padding:10px 18px; border-radius:8px; font-weight:700; font-family:inherit;">
                 إضافة الفرع
             </button>

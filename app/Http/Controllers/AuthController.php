@@ -168,6 +168,7 @@ class AuthController extends Controller
             'latitude' => ['nullable', 'numeric'],
             'longitude' => ['nullable', 'numeric'],
             'map_url' => ['nullable', 'string', 'max:2048'],
+            'working_hours' => ['nullable', 'string', 'max:5000'],
         ]);
 
         // If map_url provided as empty string, normalize to null.
@@ -175,6 +176,7 @@ class AuthController extends Controller
         $validated['address'] = isset($validated['address']) && trim((string) $validated['address']) !== '' ? $validated['address'] : null;
         $validated['phone1'] = isset($validated['phone1']) && trim((string) $validated['phone1']) !== '' ? $validated['phone1'] : null;
         $validated['phone2'] = isset($validated['phone2']) && trim((string) $validated['phone2']) !== '' ? $validated['phone2'] : null;
+        $validated['working_hours'] = isset($validated['working_hours']) && trim((string) $validated['working_hours']) !== '' ? $validated['working_hours'] : null;
 
         Branch::query()->create($validated);
 
@@ -200,12 +202,14 @@ class AuthController extends Controller
             'latitude' => ['nullable', 'numeric'],
             'longitude' => ['nullable', 'numeric'],
             'map_url' => ['nullable', 'string', 'max:2048'],
+            'working_hours' => ['nullable', 'string', 'max:5000'],
         ]);
 
         $validated['map_url'] = isset($validated['map_url']) && trim((string) $validated['map_url']) !== '' ? $validated['map_url'] : null;
         $validated['address'] = isset($validated['address']) && trim((string) $validated['address']) !== '' ? $validated['address'] : null;
         $validated['phone1'] = isset($validated['phone1']) && trim((string) $validated['phone1']) !== '' ? $validated['phone1'] : null;
         $validated['phone2'] = isset($validated['phone2']) && trim((string) $validated['phone2']) !== '' ? $validated['phone2'] : null;
+        $validated['working_hours'] = isset($validated['working_hours']) && trim((string) $validated['working_hours']) !== '' ? $validated['working_hours'] : null;
 
         $branch->update($validated);
 
@@ -1459,6 +1463,7 @@ class AuthController extends Controller
             'latitude' => $branch->latitude,
             'longitude' => $branch->longitude,
             'map_url' => $branch->map_url,
+            'working_hours' => $branch->working_hours,
             'created_at' => optional($branch->created_at)?->toISOString(),
             'updated_at' => optional($branch->updated_at)?->toISOString(),
         ];
