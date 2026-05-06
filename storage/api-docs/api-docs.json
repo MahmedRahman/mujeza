@@ -423,6 +423,49 @@
                 }
             }
         },
+        "/api/agent/prompts": {
+            "get": {
+                "tags": [
+                    "AI Agent"
+                ],
+                "summary": "Get AI Agent prompts",
+                "description": "Returns Positive Prompt and Negative Prompt saved in system settings.",
+                "operationId": "getAgentPrompts",
+                "responses": {
+                    "200": {
+                        "description": "Agent prompts fetched successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "positive_prompt": {
+                                                    "type": "string",
+                                                    "example": "كن ودودًا وركز على احتياج العميل",
+                                                    "nullable": true
+                                                },
+                                                "negative_prompt": {
+                                                    "type": "string",
+                                                    "example": "لا تقدم وعودًا غير واقعية",
+                                                    "nullable": true
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/whatsapp/auto-reply/numbers": {
             "get": {
                 "tags": [
@@ -589,6 +632,10 @@
         {
             "name": "Orders",
             "description": "Orders"
+        },
+        {
+            "name": "AI Agent",
+            "description": "AI Agent"
         },
         {
             "name": "WhatsApp",

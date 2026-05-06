@@ -38,6 +38,16 @@
                 <input name="email" type="email" value="{{ old('email', $settings['email'] ?? '') }}" style="width: 100%; border: 1px solid #d1d5db; border-radius: 8px; padding: 10px; font-family: inherit;">
             </div>
 
+            <h3 style="margin: 20px 0 10px; font-weight: 800;">بيانات الـ AI Agent</h3>
+            <div style="margin-bottom: 12px;">
+                <label style="display: block; margin-bottom: 6px; font-weight: 700;">Positive Prompt</label>
+                <textarea name="ai_positive_prompt" rows="5" placeholder="اكتب الـ positive prompt هنا..." style="width: 100%; border: 1px solid #d1d5db; border-radius: 8px; padding: 10px; font-family: inherit;">{{ old('ai_positive_prompt', $settings['ai_positive_prompt'] ?? '') }}</textarea>
+            </div>
+            <div style="margin-bottom: 12px;">
+                <label style="display: block; margin-bottom: 6px; font-weight: 700;">Negative Prompt</label>
+                <textarea name="ai_negative_prompt" rows="5" placeholder="اكتب الـ negative prompt هنا..." style="width: 100%; border: 1px solid #d1d5db; border-radius: 8px; padding: 10px; font-family: inherit;">{{ old('ai_negative_prompt', $settings['ai_negative_prompt'] ?? '') }}</textarea>
+            </div>
+
             <h3 style="margin: 20px 0 10px; font-weight: 800;">بيانات التواصل</h3>
             <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:12px; margin-bottom:12px;">
                 <div>

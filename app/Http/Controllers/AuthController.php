@@ -969,6 +969,48 @@ class AuthController extends Controller
         ]);
     }
 
+    #[OA\Get(
+        path: '/api/agent/prompts',
+        operationId: 'getAgentPrompts',
+        tags: ['AI Agent'],
+        summary: 'Get AI Agent prompts',
+        description: 'Returns Positive Prompt and Negative Prompt saved in system settings.',
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Agent prompts fetched successfully',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'success', type: 'boolean', example: true),
+                        new OA\Property(
+                            property: 'data',
+                            type: 'object',
+                            properties: [
+                                new OA\Property(property: 'positive_prompt', type: 'string', nullable: true, example: 'كن ودودًا وركز على احتياج العميل'),
+                                new OA\Property(property: 'negative_prompt', type: 'string', nullable: true, example: 'لا تقدم وعودًا غير واقعية'),
+                            ]
+                        ),
+                    ]
+                )
+            ),
+        ]
+    )]
+    public function apiAgentPrompts(Request $request): JsonResponse
+    {
+        $prompts = Setting::query()
+            ->whereIn('key', ['ai_positive_prompt', 'ai_negative_prompt'])
+            ->pluck('value', 'key')
+            ->toArray();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'positive_prompt' => $prompts['ai_positive_prompt'] ?? null,
+                'negative_prompt' => $prompts['ai_negative_prompt'] ?? null,
+            ],
+        ]);
+    }
+
     public function createProduct(): View
     {
         return view('dashboard.products-create');
@@ -1122,6 +1164,8 @@ class AuthController extends Controller
         $defaults = [
             'store_name' => 'Mujeza',
             'email' => 'admin@mujeza.local',
+            'ai_positive_prompt' => '',
+            'ai_negative_prompt' => '',
             'phone1' => '',
             'phone2' => '',
             'whatsapp' => '',
@@ -1152,6 +1196,8 @@ class AuthController extends Controller
         $validated = $request->validate([
             'store_name' => ['required', 'string', 'max:255'],
             'email' => ['nullable', 'email', 'max:255'],
+            'ai_positive_prompt' => ['nullable', 'string', 'max:10000'],
+            'ai_negative_prompt' => ['nullable', 'string', 'max:10000'],
             'phone1' => ['nullable', 'string', 'max:50'],
             'phone2' => ['nullable', 'string', 'max:50'],
             'whatsapp' => ['nullable', 'string', 'max:50'],
@@ -1176,7 +1222,7 @@ class AuthController extends Controller
 
         return redirect()
             ->route('settings.index')
-            ->with('success', 'تم حفظ بيانات التواصل ونبذة الشركة بنجاح.');
+            ->with('success', 'تم حفظ إعدادات النظام وبيانات الـ AI Agent بنجاح.');
     }
 
     public function conversations(): View
