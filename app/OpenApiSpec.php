@@ -10,8 +10,8 @@ use OpenApi\Attributes as OA;
     description: 'API documentation for Mujeza products and related endpoints.'
 )]
 #[OA\Server(
-    url: 'http://127.0.0.1:8000',
-    description: 'Default API server'
+    url: 'https://app.taheelplus.com',
+    description: 'Production API server'
 )]
 class OpenApiSpec
 {
