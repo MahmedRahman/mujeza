@@ -1163,6 +1163,91 @@ class AuthController extends Controller
             ->with('success', 'تم تعديل المنتج بنجاح.');
     }
 
+    // ─── FAQs ────────────────────────────────────────────────────────────────
+
+    public function faqs(): View
+    {
+        $faqs = \App\Models\Faq::query()->orderBy('sort_order')->orderBy('id')->get();
+
+        return view('dashboard.faqs', compact('faqs'));
+    }
+
+    public function createFaq(): View
+    {
+        return view('dashboard.faqs-create');
+    }
+
+    public function storeFaq(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'question'   => ['required', 'string', 'max:1000'],
+            'answer'     => ['required', 'string', 'max:5000'],
+            'sort_order' => ['nullable', 'integer', 'min:0'],
+            'is_active'  => ['nullable', 'boolean'],
+        ]);
+
+        \App\Models\Faq::query()->create([
+            'question'   => $validated['question'],
+            'answer'     => $validated['answer'],
+            'sort_order' => $validated['sort_order'] ?? 0,
+            'is_active'  => isset($validated['is_active']) ? (bool) $validated['is_active'] : true,
+        ]);
+
+        return redirect()->route('faqs.index')->with('success', 'تم إضافة السؤال والجواب بنجاح.');
+    }
+
+    public function editFaq(\App\Models\Faq $faq): View
+    {
+        return view('dashboard.faqs-edit', compact('faq'));
+    }
+
+    public function updateFaq(Request $request, \App\Models\Faq $faq): RedirectResponse
+    {
+        $validated = $request->validate([
+            'question'   => ['required', 'string', 'max:1000'],
+            'answer'     => ['required', 'string', 'max:5000'],
+            'sort_order' => ['nullable', 'integer', 'min:0'],
+            'is_active'  => ['nullable', 'boolean'],
+        ]);
+
+        $faq->update([
+            'question'   => $validated['question'],
+            'answer'     => $validated['answer'],
+            'sort_order' => $validated['sort_order'] ?? 0,
+            'is_active'  => array_key_exists('is_active', $validated) ? (bool) $validated['is_active'] : false,
+        ]);
+
+        return redirect()->route('faqs.index')->with('success', 'تم تعديل السؤال والجواب بنجاح.');
+    }
+
+    public function destroyFaq(\App\Models\Faq $faq): RedirectResponse
+    {
+        $faq->delete();
+
+        return redirect()->route('faqs.index')->with('success', 'تم حذف السؤال والجواب بنجاح.');
+    }
+
+    // ─── API: FAQs ───────────────────────────────────────────────────────────
+
+    public function apiFaqs(): JsonResponse
+    {
+        $faqs = \App\Models\Faq::query()
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get()
+            ->map(fn (\App\Models\Faq $faq) => [
+                'id'         => $faq->id,
+                'question'   => $faq->question,
+                'answer'     => $faq->answer,
+                'sort_order' => $faq->sort_order,
+            ]);
+
+        return response()->json(['data' => $faqs]);
+    }
+
+    // ─── Settings ────────────────────────────────────────────────────────────
+
     public function settings(): View
     {
         $defaults = [

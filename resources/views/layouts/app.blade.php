@@ -181,6 +181,7 @@
                 <a class="{{ request()->routeIs('orders.*') ? 'active' : '' }}" href="{{ route('orders.index') }}">الطلبات</a>
                 <a class="{{ request()->routeIs('branches.*') ? 'active' : '' }}" href="{{ route('branches.index') }}">الفروع</a>
                 <a class="{{ request()->routeIs('complaints.*') ? 'active' : '' }}" href="{{ route('complaints.index') }}">الشكاوى والاستفسارات</a>
+                <a class="{{ request()->routeIs('faqs.*') ? 'active' : '' }}" href="{{ route('faqs.index') }}">الأسئلة الشائعة</a>
 
                 <div class="nav-group">
                     <span class="nav-group-title">بيانات النظام</span>

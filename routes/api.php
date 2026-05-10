@@ -16,3 +16,5 @@ Route::delete('/complaints/{complaint}', [AuthController::class, 'apiDestroyComp
 Route::post('/orders', [AuthController::class, 'apiStoreOrder'])->name('api.orders.store');
 Route::get('/orders/status', [AuthController::class, 'apiOrderStatusByPhone'])->name('api.orders.status-by-phone');
 Route::get('/agent/prompts', [AuthController::class, 'apiAgentPrompts'])->name('api.agent.prompts');
+
+Route::get('/faqs', [AuthController::class, 'apiFaqs'])->name('api.faqs.index');

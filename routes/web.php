@@ -52,6 +52,13 @@ Route::middleware('auth')->group(function () {
     Route::put('/complaints/{complaint}', [AuthController::class, 'updateComplaint'])->name('complaints.update');
     Route::delete('/complaints/{complaint}', [AuthController::class, 'destroyComplaint'])->name('complaints.destroy');
 
+    Route::get('/faqs', [AuthController::class, 'faqs'])->name('faqs.index');
+    Route::get('/faqs/create', [AuthController::class, 'createFaq'])->name('faqs.create');
+    Route::post('/faqs', [AuthController::class, 'storeFaq'])->name('faqs.store');
+    Route::get('/faqs/{faq}/edit', [AuthController::class, 'editFaq'])->name('faqs.edit');
+    Route::put('/faqs/{faq}', [AuthController::class, 'updateFaq'])->name('faqs.update');
+    Route::delete('/faqs/{faq}', [AuthController::class, 'destroyFaq'])->name('faqs.destroy');
+
     Route::get('/settings', [AuthController::class, 'settings'])->name('settings.index');
     Route::post('/settings', [AuthController::class, 'updateSettings'])->name('settings.update');
     Route::get('/conversations', [AuthController::class, 'conversations'])->name('conversations.index');
