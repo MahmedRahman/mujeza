@@ -50,6 +50,23 @@
                 </div>
             @endif
 
+            {{-- إشعار واتساب --}}
+            <div style="border:1px solid #d1fae5; border-radius:10px; padding:14px 16px; background:#f0fdf4; margin-bottom:14px; display:flex; align-items:flex-start; gap:12px;">
+                <input type="checkbox" name="notify_customer" value="1" id="notify_customer"
+                       style="margin-top:3px; width:18px; height:18px; accent-color:#16a34a; flex-shrink:0; cursor:pointer;">
+                <label for="notify_customer" style="cursor:pointer; line-height:1.5;">
+                    <span style="font-weight:800; color:#15803d; font-size:14px;">📲 إرسال إشعار واتساب للعميل</span>
+                    <div style="font-size:12px; color:#4b5563; margin-top:3px;">
+                        سيتم إرسال رسالة على الـ remoteJid بحالة الطلب الجديدة
+                        @if($order->remote_jid)
+                            — <span style="font-family:monospace; direction:ltr; display:inline-block;">{{ $order->remote_jid }}</span>
+                        @else
+                            <span style="color:#ef4444;">(لا يوجد remoteJid مرتبط بهذا الطلب)</span>
+                        @endif
+                    </div>
+                </label>
+            </div>
+
             <div style="margin-top: 14px;">
                 <button type="submit" style="border:none; background:#d4af37; color:#111827; padding:10px 18px; border-radius:8px; font-weight:700; font-family:inherit;">
                     حفظ التعديلات

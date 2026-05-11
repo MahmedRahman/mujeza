@@ -653,22 +653,80 @@ class AuthController extends Controller
             'remote_jid'       => ['nullable', 'string', 'max:255'],
             'delivery_address' => ['nullable', 'string', 'max:2000'],
             'status'           => ['required', 'string', 'max:100'],
+            'notify_customer'  => ['nullable', 'boolean'],
         ]);
 
-        $remoteJid = trim((string) ($validated['remote_jid'] ?? ''));
-        $customer  = $remoteJid ? Customer::query()->where('remote_jid', $remoteJid)->first() : null;
+        $remoteJid  = trim((string) ($validated['remote_jid'] ?? ''));
+        $customer   = $remoteJid ? Customer::query()->where('remote_jid', $remoteJid)->first() : null;
+        $oldStatus  = $order->status;
+        $newStatus  = $validated['status'];
 
         $order->update([
             'remote_jid'       => $remoteJid ?: null,
             'customer_name'    => $customer?->name ?? $order->customer_name,
             'phone'            => $customer?->phone ?? $order->phone,
             'delivery_address' => trim((string) ($validated['delivery_address'] ?? '')),
-            'status'           => $validated['status'],
+            'status'           => $newStatus,
         ]);
+
+        $shouldNotify = (bool) ($validated['notify_customer'] ?? false);
+
+        if ($shouldNotify && $remoteJid !== '') {
+            $customerName = $customer?->name ?? $order->customer_name ?? 'عزيزي العميل';
+            $message = "مرحباً {$customerName} 👋\n\n"
+                . "تم تحديث حالة طلبك رقم *{$order->order_number}*\n\n"
+                . "📦 الحالة الجديدة: *{$newStatus}*\n\n"
+                . "شكراً لتعاملكم معنا 🌿";
+
+            $this->sendWhatsAppText($remoteJid, $message);
+        }
 
         return redirect()
             ->route('orders.index')
             ->with('success', 'تم تعديل الطلب بنجاح.');
+    }
+
+    private function sendWhatsAppText(string $remoteJid, string $text): bool
+    {
+        $stored = Setting::query()
+            ->whereIn('key', ['evo_url', 'evo_api_key', 'evo_instance'])
+            ->pluck('value', 'key')
+            ->toArray();
+
+        $url      = rtrim($stored['evo_url'] ?? '', '/');
+        $apiKey   = $stored['evo_api_key'] ?? '';
+        $instance = $stored['evo_instance'] ?? '';
+
+        if (! $url || ! $instance) {
+            Log::warning('WhatsApp notification skipped: Evolution API not configured.');
+            return false;
+        }
+
+        $number = (string) preg_replace('/@[^@]+$/', '', $remoteJid);
+
+        try {
+            $response = Http::withHeaders([
+                'apikey'       => $apiKey,
+                'Content-Type' => 'application/json',
+            ])->timeout(15)->post("{$url}/message/sendText/{$instance}", [
+                'number' => $number,
+                'text'   => $text,
+            ]);
+
+            if (! $response->successful()) {
+                Log::error('WhatsApp order notification failed', [
+                    'status' => $response->status(),
+                    'body'   => $response->body(),
+                    'jid'    => $remoteJid,
+                ]);
+                return false;
+            }
+
+            return true;
+        } catch (\Throwable $e) {
+            Log::error('WhatsApp order notification exception', ['error' => $e->getMessage(), 'jid' => $remoteJid]);
+            return false;
+        }
     }
 
     public function destroyOrder(Order $order): RedirectResponse
