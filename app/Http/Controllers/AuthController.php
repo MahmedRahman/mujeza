@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Campaign;
 use App\Models\Category;
 use App\Models\Branch;
 use App\Models\Complaint;
+use App\Models\Customer;
 use App\Models\Disease;
 use App\Models\Product;
 use App\Models\Order;
@@ -108,6 +110,331 @@ class AuthController extends Controller
         return redirect()
             ->route('categories.create')
             ->with('success', 'تمت إضافة الفئة بنجاح.');
+    }
+
+    public function customers(Request $request): View
+    {
+        $q = trim((string) $request->query('q'));
+
+        $customersQuery = Customer::query();
+        if ($q !== '') {
+            $customersQuery->where(function ($builder) use ($q) {
+                $builder->where('name', 'like', '%'.$q.'%')
+                    ->orWhere('phone', 'like', '%'.$q.'%')
+                    ->orWhere('address', 'like', '%'.$q.'%');
+            });
+        }
+
+        $customers = $customersQuery->latest()->paginate(20)->withQueryString();
+
+        $autoReplyRaw = (string) (Setting::query()->where('key', 'whatsapp_auto_reply_global_enabled')->value('value') ?? '0');
+        $autoReplyEnabled = in_array(strtolower($autoReplyRaw), ['1', 'true', 'on', 'yes'], true);
+
+        $overridesRaw = Setting::query()->where('key', 'whatsapp_auto_reply_chat_overrides')->value('value');
+        $chatOverrides = [];
+        if (is_string($overridesRaw) && trim($overridesRaw) !== '') {
+            $decoded = json_decode($overridesRaw, true);
+            if (is_array($decoded)) {
+                $chatOverrides = $decoded;
+            }
+        }
+
+        return view('dashboard.customers', [
+            'customers'        => $customers,
+            'q'                => $q,
+            'totalCount'       => Customer::query()->count(),
+            'autoReplyEnabled' => $autoReplyEnabled,
+            'chatOverrides'    => $chatOverrides,
+        ]);
+    }
+
+    public function createCustomer(): View
+    {
+        $autoReplyRaw     = (string) (Setting::query()->where('key', 'whatsapp_auto_reply_global_enabled')->value('value') ?? '0');
+        $autoReplyEnabled = in_array(strtolower($autoReplyRaw), ['1', 'true', 'on', 'yes'], true);
+
+        return view('dashboard.customers-create', [
+            'globalAutoReply' => $autoReplyEnabled,
+        ]);
+    }
+
+    public function storeCustomer(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'phone'      => ['required', 'string', 'max:20', 'unique:customers,phone'],
+            'name'       => ['required', 'string', 'max:255'],
+            'address'    => ['nullable', 'string', 'max:1000'],
+            'auto_reply' => ['nullable', 'in:0,1'],
+        ]);
+
+        Customer::query()->create([
+            'phone'   => $validated['phone'],
+            'name'    => $validated['name'],
+            'address' => $validated['address'] ?? null,
+        ]);
+
+        // حفظ override للرد الآلي لو اختلف عن الإعداد العام
+        if (isset($validated['auto_reply'])) {
+            $newVal   = (bool) $validated['auto_reply'];
+            $globalRaw = (string) (Setting::query()->where('key', 'whatsapp_auto_reply_global_enabled')->value('value') ?? '0');
+            $global   = in_array(strtolower($globalRaw), ['1', 'true', 'on', 'yes'], true);
+
+            if ($newVal !== $global) {
+                $chatId       = $validated['phone'].'@s.whatsapp.net';
+                $overridesRaw = Setting::query()->where('key', 'whatsapp_auto_reply_chat_overrides')->value('value');
+                $overrides    = [];
+                if (is_string($overridesRaw) && trim($overridesRaw) !== '') {
+                    $decoded = json_decode($overridesRaw, true);
+                    if (is_array($decoded)) {
+                        $overrides = $decoded;
+                    }
+                }
+                $overrides[$chatId] = $newVal;
+                Setting::query()->updateOrCreate(
+                    ['key' => 'whatsapp_auto_reply_chat_overrides'],
+                    ['value' => json_encode($overrides, JSON_UNESCAPED_UNICODE)]
+                );
+            }
+        }
+
+        return redirect()->route('customers.index')->with('success', 'تمت إضافة المستخدم بنجاح.');
+    }
+
+    public function editCustomer(Customer $customer): View
+    {
+        $autoReplyRaw  = (string) (Setting::query()->where('key', 'whatsapp_auto_reply_global_enabled')->value('value') ?? '0');
+        $globalEnabled = in_array(strtolower($autoReplyRaw), ['1', 'true', 'on', 'yes'], true);
+
+        $overridesRaw = Setting::query()->where('key', 'whatsapp_auto_reply_chat_overrides')->value('value');
+        $chatOverrides = [];
+        if (is_string($overridesRaw) && trim($overridesRaw) !== '') {
+            $decoded = json_decode($overridesRaw, true);
+            if (is_array($decoded)) {
+                $chatOverrides = $decoded;
+            }
+        }
+
+        $chatId      = $customer->phone.'@s.whatsapp.net';
+        $hasOverride = array_key_exists($chatId, $chatOverrides);
+        $autoReply   = $hasOverride ? (bool) $chatOverrides[$chatId] : $globalEnabled;
+
+        return view('dashboard.customers-edit', [
+            'customer'     => $customer,
+            'chatId'       => $chatId,
+            'autoReply'    => $autoReply,
+            'hasOverride'  => $hasOverride,
+            'globalEnabled'=> $globalEnabled,
+        ]);
+    }
+
+    public function updateCustomer(Request $request, Customer $customer): RedirectResponse
+    {
+        $validated = $request->validate([
+            'name'    => ['required', 'string', 'max:255'],
+            'address' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $customer->update($validated);
+
+        return redirect()->route('customers.index')->with('success', 'تم تحديث بيانات المستخدم بنجاح.');
+    }
+
+    public function destroyCustomer(Customer $customer): RedirectResponse
+    {
+        $customer->delete();
+
+        return redirect()->route('customers.index')->with('success', 'تم حذف المستخدم بنجاح.');
+    }
+
+    public function campaigns(): View
+    {
+        $campaigns = Campaign::query()->latest()->paginate(20);
+
+        return view('dashboard.campaigns', [
+            'campaigns' => $campaigns,
+        ]);
+    }
+
+    public function createCampaign(): View
+    {
+        $customers = Customer::query()->orderBy('created_at', 'desc')->get();
+        $phoneLimit = (int) (Setting::query()->where('key', 'campaign_phone_limit')->value('value') ?? 100);
+
+        return view('dashboard.campaigns-create', [
+            'customers'  => $customers,
+            'phoneLimit' => $phoneLimit,
+        ]);
+    }
+
+    public function storeCampaign(Request $request): RedirectResponse
+    {
+        $phoneLimit = (int) (Setting::query()->where('key', 'campaign_phone_limit')->value('value') ?? 100);
+
+        $validated = $request->validate([
+            'name'     => ['required', 'string', 'max:255'],
+            'phones'   => ['required', 'array', 'min:1', 'max:'.$phoneLimit],
+            'phones.*' => ['required', 'string'],
+            'message'  => ['required', 'string', 'max:4000'],
+        ], [
+            'phones.max' => 'لا يمكن إضافة أكثر من '.$phoneLimit.' رقم في الحملة الواحدة. يمكن تغيير الحد من الإعدادات.',
+        ]);
+
+        $phones = collect($validated['phones'])->map(function (string $phone) {
+            $customer = Customer::query()->find($phone);
+
+            return [
+                'phone' => $phone,
+                'name'  => $customer?->name ?? $phone,
+            ];
+        })->values()->all();
+
+        $campaign = Campaign::query()->create([
+            'name'          => $validated['name'],
+            'message'       => $validated['message'],
+            'phones_count'  => count($phones),
+            'success_count' => 0,
+            'failed_count'  => 0,
+            'status'        => 'pending',
+            'results'       => $phones,
+        ]);
+
+        return redirect()->route('campaigns.show', $campaign)->with('success', 'تم حفظ الحملة. يمكنك تشغيلها متى تريد.');
+    }
+
+    public function showCampaign(Campaign $campaign): View
+    {
+        return view('dashboard.campaigns-show', [
+            'campaign' => $campaign,
+        ]);
+    }
+
+    public function dispatchCampaign(Campaign $campaign): RedirectResponse
+    {
+        if ($campaign->status === 'cancelled') {
+            return back()->with('error', 'لا يمكن تشغيل حملة ملغاة.');
+        }
+
+        $cfg = $this->evoConfig();
+        $results = [];
+
+        foreach (($campaign->results ?? []) as $entry) {
+            $results[] = $this->evoSendToPhone(
+                cfg: $cfg,
+                phone: $entry['phone'],
+                name: $entry['name'],
+                text: $campaign->message,
+            );
+        }
+
+        $campaign->update([
+            'status'        => 'sent',
+            'success_count' => collect($results)->where('status', 'success')->count(),
+            'failed_count'  => collect($results)->where('status', 'error')->count(),
+            'results'       => $results,
+        ]);
+
+        return redirect()->route('campaigns.show', $campaign)->with('success', 'تم إرسال الحملة بنجاح.');
+    }
+
+    public function cancelCampaign(Campaign $campaign): RedirectResponse
+    {
+        if ($campaign->status !== 'pending') {
+            return back()->with('error', 'لا يمكن إلغاء إلا الحملات التي لم تُرسَل بعد.');
+        }
+
+        $campaign->update(['status' => 'cancelled']);
+
+        return redirect()->route('campaigns.show', $campaign)->with('success', 'تم إلغاء الحملة.');
+    }
+
+    public function resendCampaign(Campaign $campaign): RedirectResponse
+    {
+        $cfg = $this->evoConfig();
+        $results = [];
+
+        $previous = collect($campaign->results ?? []);
+
+        foreach ($previous as $entry) {
+            $results[] = $this->evoSendToPhone(
+                cfg: $cfg,
+                phone: $entry['phone'],
+                name: $entry['name'],
+                text: $campaign->message,
+            );
+        }
+
+        $campaign->update([
+            'status'        => 'sent',
+            'success_count' => collect($results)->where('status', 'success')->count(),
+            'failed_count'  => collect($results)->where('status', 'error')->count(),
+            'results'       => $results,
+        ]);
+
+        return redirect()->route('campaigns.show', $campaign)->with('success', 'تمت إعادة إرسال الحملة.');
+    }
+
+    public function destroyCampaign(Campaign $campaign): RedirectResponse
+    {
+        $campaign->delete();
+
+        return redirect()->route('campaigns.index')->with('success', 'تم حذف الحملة بنجاح.');
+    }
+
+    private function evoConfig(): array
+    {
+        $stored = Setting::query()
+            ->whereIn('key', ['evo_url', 'evo_api_key', 'evo_instance'])
+            ->pluck('value', 'key')
+            ->toArray();
+
+        return [
+            'url'      => rtrim($stored['evo_url'] ?? '', '/'),
+            'key'      => $stored['evo_api_key'] ?? '',
+            'instance' => $stored['evo_instance'] ?? '',
+        ];
+    }
+
+    private function evoSendToPhone(array $cfg, string $phone, string $name, string $text): array
+    {
+        $base = [
+            'phone' => $phone,
+            'name'  => $name,
+        ];
+
+        if (! $cfg['url'] || ! $cfg['instance']) {
+            return array_merge($base, [
+                'status'  => 'error',
+                'message' => 'Evolution API غير مُهيّأة في الإعدادات.',
+            ]);
+        }
+
+        try {
+            $response = Http::withHeaders([
+                'apikey'       => $cfg['key'],
+                'Content-Type' => 'application/json',
+            ])->timeout(15)->post("{$cfg['url']}/message/sendText/{$cfg['instance']}", [
+                'number' => $phone,
+                'text'   => $text,
+            ]);
+
+            if ($response->successful()) {
+                return array_merge($base, ['status' => 'success', 'message' => 'تم الإرسال بنجاح']);
+            }
+
+            Log::warning('Campaign send failed', ['phone' => $phone, 'status' => $response->status()]);
+
+            return array_merge($base, [
+                'status'  => 'error',
+                'message' => 'فشل الإرسال — كود '.$response->status(),
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Campaign send exception', ['phone' => $phone, 'error' => $e->getMessage()]);
+
+            return array_merge($base, [
+                'status'  => 'error',
+                'message' => 'خطأ في الاتصال: '.$e->getMessage(),
+            ]);
+        }
     }
 
     public function products(Request $request): View
@@ -240,8 +567,6 @@ class AuthController extends Controller
 
     public function createOrder(): View
     {
-        $products = Product::query()->latest()->get();
-
         $statuses = [
             'قيد المعالجة',
             'تم الاستلام',
@@ -251,17 +576,16 @@ class AuthController extends Controller
             'ملغي',
         ];
 
+        $customers = Customer::query()->orderBy('name')->get(['phone', 'name', 'address']);
+
         return view('dashboard.orders-create', [
-            'products' => $products,
-            'statuses' => $statuses,
+            'statuses'  => $statuses,
+            'customers' => $customers,
         ]);
     }
 
     public function editOrder(Order $order): View
     {
-        $order->load('items');
-
-        $products = Product::query()->latest()->get();
         $statuses = [
             'قيد المعالجة',
             'تم الاستلام',
@@ -272,8 +596,7 @@ class AuthController extends Controller
         ];
 
         return view('dashboard.orders-edit', [
-            'order' => $order,
-            'products' => $products,
+            'order'    => $order,
             'statuses' => $statuses,
         ]);
     }
@@ -281,142 +604,48 @@ class AuthController extends Controller
     public function storeOrder(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'customer_name' => ['required', 'string', 'max:255'],
-            'phone' => ['required', 'string', 'max:50'],
-            'delivery_address' => ['required', 'string', 'max:2000'],
-            'status' => ['required', 'string', 'max:100'],
-
-            'product_ids' => ['required', 'array', 'min:1'],
-            'product_ids.*' => ['required', 'integer', 'distinct', 'exists:products,id'],
-
-            'quantities' => ['required', 'array', 'min:1'],
-            'quantities.*' => ['required', 'integer', 'min:1', 'max:1000'],
+            'customer_name'    => ['required', 'string', 'max:255'],
+            'phone'            => ['nullable', 'string', 'max:50'],
+            'delivery_address' => ['nullable', 'string', 'max:2000'],
+            'items'            => ['required', 'string', 'max:5000'],
+            'status'           => ['required', 'string', 'max:100'],
         ]);
-
-        $productIds = array_values($validated['product_ids']);
-        $quantities = array_values($validated['quantities']);
-
-        if (count($productIds) !== count($quantities)) {
-            return back()->withErrors(['quantities' => 'بيانات المنتجات والكمية غير متطابقة.'])->withInput();
-        }
-
-        $products = Product::query()->whereIn('id', $productIds)->get()->keyBy('id');
-
-        $total = 0.0;
-        $lines = [];
-        foreach ($productIds as $idx => $pid) {
-            $qty = (int) $quantities[$idx];
-            $product = $products->get((int) $pid);
-            if (! $product) {
-                continue;
-            }
-
-            $unitPrice = (float) $product->price;
-            $lineTotal = round($unitPrice * $qty, 2);
-            $total += $lineTotal;
-
-            $lines[] = [
-                'product_id' => $product->id,
-                'product_title' => $product->title,
-                'unit_price' => $unitPrice,
-                'quantity' => $qty,
-                'line_total' => $lineTotal,
-            ];
-        }
 
         $orderNumber = (int) (Order::query()->max('order_number') ?? 0) + 1;
 
-        $order = Order::query()->create([
-            'order_number' => $orderNumber,
-            'customer_name' => $validated['customer_name'],
-            'phone' => $validated['phone'],
-            'delivery_address' => trim((string) $validated['delivery_address']),
-            'status' => $validated['status'],
-            'total_amount' => round($total, 2),
+        Order::query()->create([
+            'order_number'     => $orderNumber,
+            'customer_name'    => $validated['customer_name'],
+            'phone'            => trim((string) ($validated['phone'] ?? '')),
+            'delivery_address' => trim((string) ($validated['delivery_address'] ?? '')),
+            'items_text'       => trim((string) $validated['items']),
+            'status'           => $validated['status'],
+            'total_amount'     => 0,
         ]);
 
-        foreach ($lines as $line) {
-            $order->items()->create([
-                'order_id' => $order->id,
-                'product_id' => $line['product_id'],
-                'product_title' => $line['product_title'],
-                'unit_price' => $line['unit_price'],
-                'quantity' => $line['quantity'],
-                'line_total' => $line['line_total'],
-            ]);
-        }
-
         return redirect()
-            ->route('orders.show', $order)
+            ->route('orders.index')
             ->with('success', 'تم إنشاء الطلب بنجاح.');
     }
 
     public function updateOrder(Request $request, Order $order): RedirectResponse
     {
         $validated = $request->validate([
-            'customer_name' => ['required', 'string', 'max:255'],
-            'phone' => ['required', 'string', 'max:50'],
-            'delivery_address' => ['required', 'string', 'max:2000'],
-            'status' => ['required', 'string', 'max:100'],
-            'product_ids' => ['required', 'array', 'min:1'],
-            'product_ids.*' => ['required', 'integer', 'exists:products,id'],
-            'quantities' => ['required', 'array', 'min:1'],
-            'quantities.*' => ['required', 'integer', 'min:1', 'max:1000'],
+            'customer_name'    => ['required', 'string', 'max:255'],
+            'phone'            => ['required', 'string', 'max:50'],
+            'delivery_address' => ['nullable', 'string', 'max:2000'],
+            'status'           => ['required', 'string', 'max:100'],
         ]);
-
-        $productIds = array_values($validated['product_ids']);
-        $quantities = array_values($validated['quantities']);
-
-        if (count($productIds) !== count($quantities)) {
-            return back()->withErrors(['quantities' => 'بيانات المنتجات والكمية غير متطابقة.'])->withInput();
-        }
-
-        $products = Product::query()->whereIn('id', $productIds)->get()->keyBy('id');
-
-        $total = 0.0;
-        $lines = [];
-        foreach ($productIds as $idx => $pid) {
-            $qty = (int) $quantities[$idx];
-            $product = $products->get((int) $pid);
-            if (! $product) {
-                continue;
-            }
-
-            $unitPrice = (float) $product->price;
-            $lineTotal = round($unitPrice * $qty, 2);
-            $total += $lineTotal;
-
-            $lines[] = [
-                'product_id' => $product->id,
-                'product_title' => $product->title,
-                'unit_price' => $unitPrice,
-                'quantity' => $qty,
-                'line_total' => $lineTotal,
-            ];
-        }
 
         $order->update([
-            'customer_name' => $validated['customer_name'],
-            'phone' => $validated['phone'],
-            'delivery_address' => trim((string) $validated['delivery_address']),
-            'status' => $validated['status'],
-            'total_amount' => round($total, 2),
+            'customer_name'    => $validated['customer_name'],
+            'phone'            => $validated['phone'],
+            'delivery_address' => trim((string) ($validated['delivery_address'] ?? '')),
+            'status'           => $validated['status'],
         ]);
 
-        OrderItem::query()->where('order_id', $order->id)->delete();
-        foreach ($lines as $line) {
-            $order->items()->create([
-                'order_id' => $order->id,
-                'product_id' => $line['product_id'],
-                'product_title' => $line['product_title'],
-                'unit_price' => $line['unit_price'],
-                'quantity' => $line['quantity'],
-                'line_total' => $line['line_total'],
-            ]);
-        }
-
         return redirect()
-            ->route('orders.show', $order)
+            ->route('orders.index')
             ->with('success', 'تم تعديل الطلب بنجاح.');
     }
 
@@ -611,6 +840,73 @@ class AuthController extends Controller
             'query' => $query,
             'count' => $items->count(),
             'data' => $items,
+        ]);
+    }
+
+    #[OA\Get(
+        path: '/api/products/search-by-disease',
+        operationId: 'searchProductsByDisease',
+        tags: ['Products'],
+        summary: 'Search recommended products by disease name',
+        description: 'Returns available products that are recommended for a given disease. The search is partial and case-insensitive — sending "سكر" will match "مرض السكري" etc.',
+        parameters: [
+            new OA\Parameter(
+                name: 'disease',
+                description: 'Disease name to search for (partial match)',
+                in: 'query',
+                required: true,
+                schema: new OA\Schema(type: 'string', example: 'السكري')
+            ),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Products fetched successfully',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'success', type: 'boolean', example: true),
+                        new OA\Property(property: 'disease', type: 'string', example: 'السكري'),
+                        new OA\Property(property: 'count', type: 'integer', example: 3),
+                        new OA\Property(
+                            property: 'data',
+                            type: 'array',
+                            items: new OA\Items(type: 'object')
+                        ),
+                    ]
+                )
+            ),
+            new OA\Response(response: 422, description: 'حقل disease مطلوب'),
+        ]
+    )]
+    public function apiSearchProductsByDisease(Request $request): JsonResponse
+    {
+        $request->validate([
+            'disease' => ['required', 'string', 'max:255'],
+        ]);
+
+        $disease = trim((string) $request->query('disease'));
+
+        // SQLite stores JSON with unicode escapes so DB-level LIKE on Arabic text
+        // never matches. We fetch all available products and filter in PHP after
+        // the model decodes the JSON cast correctly.
+        $products = Product::query()
+            ->where('is_available', true)
+            ->latest()
+            ->get()
+            ->filter(fn (Product $product) =>
+                collect($product->diseases ?? [])->contains(
+                    fn ($d) => mb_stripos((string) $d, $disease) !== false
+                )
+            )
+            ->values();
+
+        $items = $products->map(fn (Product $product) => $this->transformProductForApi($product))->values();
+
+        return response()->json([
+            'success' => true,
+            'disease' => $disease,
+            'count'   => $items->count(),
+            'data'    => $items,
         ]);
     }
 
@@ -900,7 +1196,7 @@ class AuthController extends Controller
         operationId: 'getOrderStatusByPhone',
         tags: ['Orders'],
         summary: 'Get order status',
-        description: 'Returns latest order status and all matching orders by order_number or customer_name or phone.',
+        description: 'Returns latest order status and all matching orders by order_number, customer_name, or phone. When searching by phone, cancelled ("ملغي") and delivered ("تم التسليم") orders are excluded by default — pass include_closed=1 to include them.',
         parameters: [
             new OA\Parameter(
                 name: 'order_number',
@@ -918,28 +1214,50 @@ class AuthController extends Controller
             ),
             new OA\Parameter(
                 name: 'phone',
-                description: 'Customer phone number (optional fallback)',
+                description: 'Customer phone number',
                 in: 'query',
                 required: false,
                 schema: new OA\Schema(type: 'string', example: '96550000000')
             ),
+            new OA\Parameter(
+                name: 'include_closed',
+                description: 'Set to 1 to include cancelled and delivered orders (only applies to phone search)',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'integer', enum: [0, 1], example: 0)
+            ),
         ],
         responses: [
-            new OA\Response(response: 200, description: 'Order status fetched successfully'),
+            new OA\Response(
+                response: 200,
+                description: 'Order status fetched successfully',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'success', type: 'boolean', example: true),
+                        new OA\Property(property: 'found', type: 'boolean', example: true),
+                        new OA\Property(property: 'latest_status', type: 'string', nullable: true, example: 'قيد المعالجة'),
+                        new OA\Property(property: 'count', type: 'integer', example: 2),
+                        new OA\Property(property: 'latest_order', type: 'object', nullable: true),
+                        new OA\Property(property: 'orders', type: 'array', items: new OA\Items(type: 'object')),
+                    ]
+                )
+            ),
             new OA\Response(response: 422, description: 'Validation error'),
         ]
     )]
     public function apiOrderStatusByPhone(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'order_number' => ['nullable', 'integer', 'min:1'],
+            'order_number'  => ['nullable', 'integer', 'min:1'],
             'customer_name' => ['nullable', 'string', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:50'],
+            'phone'         => ['nullable', 'string', 'max:50'],
+            'include_closed' => ['nullable', 'boolean'],
         ]);
 
-        $orderNumber = isset($validated['order_number']) ? (int) $validated['order_number'] : null;
+        $orderNumber  = isset($validated['order_number']) ? (int) $validated['order_number'] : null;
         $customerName = trim((string) ($validated['customer_name'] ?? ''));
-        $phone = trim((string) ($validated['phone'] ?? ''));
+        $phone        = trim((string) ($validated['phone'] ?? ''));
+        $includeClosed = filter_var($validated['include_closed'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
         if (! $orderNumber && $customerName === '' && $phone === '') {
             return response()->json([
@@ -956,20 +1274,80 @@ class AuthController extends Controller
             $ordersQuery->where('customer_name', 'like', '%'.$customerName.'%');
         } else {
             $ordersQuery->where('phone', $phone);
+
+            if (! $includeClosed) {
+                $ordersQuery->whereNotIn('status', ['ملغي', 'تم التسليم']);
+            }
         }
 
         $orders = $ordersQuery->latest()->get();
 
-        $items = $orders->map(fn (Order $order) => $this->transformOrderForApi($order))->values();
+        $items  = $orders->map(fn (Order $order) => $this->transformOrderForApi($order))->values();
         $latest = $items->first();
 
         return response()->json([
-            'success' => true,
-            'found' => $latest !== null,
+            'success'       => true,
+            'found'         => $latest !== null,
             'latest_status' => $latest['status'] ?? null,
-            'count' => $items->count(),
-            'latest_order' => $latest,
-            'orders' => $items,
+            'count'         => $items->count(),
+            'latest_order'  => $latest,
+            'orders'        => $items,
+        ]);
+    }
+
+    #[OA\Get(
+        path: '/api/orders/by-phone',
+        operationId: 'getOrdersByPhone',
+        tags: ['Orders'],
+        summary: 'Get active orders by phone number',
+        description: 'Returns all orders for the given phone number, excluding cancelled ("ملغي") and delivered ("تم التسليم") orders.',
+        parameters: [
+            new OA\Parameter(
+                name: 'phone',
+                description: 'Customer phone number',
+                in: 'query',
+                required: true,
+                schema: new OA\Schema(type: 'string', example: '96550000000')
+            ),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Orders fetched successfully',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'success', type: 'boolean', example: true),
+                        new OA\Property(property: 'phone', type: 'string', example: '96550000000'),
+                        new OA\Property(property: 'count', type: 'integer', example: 2),
+                        new OA\Property(property: 'orders', type: 'array', items: new OA\Items(type: 'object')),
+                    ]
+                )
+            ),
+            new OA\Response(response: 422, description: 'حقل phone مطلوب'),
+        ]
+    )]
+    public function apiOrdersByPhone(Request $request): JsonResponse
+    {
+        $request->validate([
+            'phone' => ['required', 'string', 'max:50'],
+        ]);
+
+        $phone = trim((string) $request->query('phone'));
+
+        $orders = Order::query()
+            ->with('items')
+            ->where('phone', $phone)
+            ->whereNotIn('status', ['ملغي', 'تم التسليم'])
+            ->latest()
+            ->get();
+
+        $items = $orders->map(fn (Order $order) => $this->transformOrderForApi($order))->values();
+
+        return response()->json([
+            'success' => true,
+            'phone'   => $phone,
+            'count'   => $items->count(),
+            'orders'  => $items,
         ]);
     }
 
@@ -1229,6 +1607,35 @@ class AuthController extends Controller
 
     // ─── API: FAQs ───────────────────────────────────────────────────────────
 
+    #[OA\Get(
+        path: '/api/faqs',
+        operationId: 'getFaqs',
+        tags: ['FAQs'],
+        summary: 'Get active FAQs list',
+        description: 'Returns all active frequently asked questions ordered by sort_order.',
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'FAQs fetched successfully',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(
+                            property: 'data',
+                            type: 'array',
+                            items: new OA\Items(
+                                properties: [
+                                    new OA\Property(property: 'id', type: 'integer', example: 1),
+                                    new OA\Property(property: 'question', type: 'string', example: 'ما هي فوائد عسل السدر؟'),
+                                    new OA\Property(property: 'answer', type: 'string', example: 'عسل السدر غني بالمعادن والفيتامينات...'),
+                                    new OA\Property(property: 'sort_order', type: 'integer', example: 0),
+                                ]
+                            )
+                        ),
+                    ]
+                )
+            ),
+        ]
+    )]
     public function apiFaqs(): JsonResponse
     {
         $faqs = \App\Models\Faq::query()
@@ -1244,6 +1651,372 @@ class AuthController extends Controller
             ]);
 
         return response()->json(['data' => $faqs]);
+    }
+
+    #[OA\Get(
+        path: '/api/faqs/text',
+        operationId: 'getFaqsAsText',
+        tags: ['FAQs'],
+        summary: 'Get all active FAQs as a single text block',
+        description: 'Returns all active FAQs combined into one text string — questions and answers concatenated together, useful for AI agents and prompts.',
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'FAQs text fetched successfully',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(
+                            property: 'data',
+                            type: 'string',
+                            example: "س: ما هي فوائد عسل السدر؟\nج: عسل السدر غني بالمعادن والفيتامينات ويُقوّي جهاز المناعة.\n\nس: هل يمكن تناوله يومياً؟\nج: نعم، ملعقة كبيرة صباحاً على الريق."
+                        ),
+                    ]
+                )
+            ),
+        ]
+    )]
+    public function apiFaqsText(): JsonResponse
+    {
+        $faqs = \App\Models\Faq::query()
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get();
+
+        $text = $faqs->map(fn (\App\Models\Faq $faq) =>
+            'س: '.trim($faq->question)."\nج: ".trim($faq->answer)
+        )->implode("\n\n");
+
+        return response()->json(['data' => $text]);
+    }
+
+    // ─── API: Customers ──────────────────────────────────────────────────────
+
+    #[OA\Get(
+        path: '/api/customers/check',
+        operationId: 'checkCustomer',
+        tags: ['Customers'],
+        summary: 'التحقق من تسجيل رقم هاتف',
+        description: 'يتحقق إذا كان الرقم مسجلاً. إذا كان مسجلاً تُرجع بياناته مسطّحة في نفس مستوى registered، وإلا يُرجع registered: false.',
+        parameters: [
+            new OA\Parameter(
+                name: 'phone',
+                description: 'رقم الهاتف المراد التحقق منه',
+                in: 'query',
+                required: true,
+                schema: new OA\Schema(type: 'string', example: '01012345678')
+            ),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'نتيجة التحقق',
+                content: new OA\JsonContent(
+                    oneOf: [
+                        new OA\Schema(
+                            title: 'مسجل',
+                            properties: [
+                                new OA\Property(property: 'registered', type: 'boolean', example: true),
+                                new OA\Property(property: 'phone', type: 'string', example: '01012345678'),
+                                new OA\Property(property: 'name', type: 'string', example: 'محمد أحمد'),
+                                new OA\Property(property: 'address', type: 'string', example: 'القاهرة - مدينة نصر', nullable: true),
+                                new OA\Property(property: 'auto_reply', type: 'boolean', example: true),
+                                new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
+                                new OA\Property(property: 'updated_at', type: 'string', format: 'date-time'),
+                            ]
+                        ),
+                        new OA\Schema(
+                            title: 'غير مسجل',
+                            properties: [
+                                new OA\Property(property: 'registered', type: 'boolean', example: false),
+                                new OA\Property(property: 'message', type: 'string', example: 'هذا الرقم غير مسجل.'),
+                            ]
+                        ),
+                    ]
+                )
+            ),
+            new OA\Response(response: 422, description: 'حقل phone مطلوب'),
+        ]
+    )]
+    public function apiCheckCustomer(Request $request): JsonResponse
+    {
+        $request->validate([
+            'phone' => ['required', 'string'],
+        ]);
+
+        $phone    = trim((string) $request->query('phone'));
+        $customer = Customer::query()->find($phone);
+
+        if ($customer) {
+            $autoReply = $this->loadAutoReplySettings();
+
+            return response()->json(array_merge(
+                ['registered' => true],
+                $this->transformCustomerForApi($customer, $autoReply)
+            ));
+        }
+
+        return response()->json([
+            'registered' => false,
+            'message'    => 'هذا الرقم غير مسجل.',
+        ]);
+    }
+
+    #[OA\Get(
+        path: '/api/customers',
+        operationId: 'getCustomers',
+        tags: ['Customers'],
+        summary: 'Get customers list',
+        description: 'Returns all customers. Supports optional search by name, phone, or address.',
+        parameters: [
+            new OA\Parameter(
+                name: 'q',
+                description: 'Search query (optional) — searches name, phone, address',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'string', example: 'محمد')
+            ),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Customers fetched successfully',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'success', type: 'boolean', example: true),
+                        new OA\Property(property: 'count', type: 'integer', example: 5),
+                        new OA\Property(
+                            property: 'data',
+                            type: 'array',
+                            items: new OA\Items(
+                                properties: [
+                                    new OA\Property(property: 'phone', type: 'string', example: '01012345678'),
+                                    new OA\Property(property: 'name', type: 'string', example: 'محمد أحمد'),
+                                    new OA\Property(property: 'address', type: 'string', example: 'القاهرة - مدينة نصر'),
+                                    new OA\Property(property: 'auto_reply', type: 'boolean', example: true),
+                                    new OA\Property(property: 'created_at', type: 'string', format: 'date-time', example: '2026-05-10T18:00:00Z'),
+                                    new OA\Property(property: 'updated_at', type: 'string', format: 'date-time', example: '2026-05-10T18:00:00Z'),
+                                ]
+                            )
+                        ),
+                    ]
+                )
+            ),
+        ]
+    )]
+    public function apiCustomers(Request $request): JsonResponse
+    {
+        $query = trim((string) $request->query('q', ''));
+
+        $customersQuery = Customer::query();
+        if ($query !== '') {
+            $customersQuery->where(function ($builder) use ($query) {
+                $builder->where('name', 'like', '%'.$query.'%')
+                    ->orWhere('phone', 'like', '%'.$query.'%')
+                    ->orWhere('address', 'like', '%'.$query.'%');
+            });
+        }
+
+        $customers = $customersQuery->latest()->get();
+        $autoReply = $this->loadAutoReplySettings();
+        $items = $customers->map(fn (Customer $customer) => $this->transformCustomerForApi($customer, $autoReply))->values();
+
+        return response()->json([
+            'success' => true,
+            'query' => $query,
+            'count' => $items->count(),
+            'data' => $items,
+        ]);
+    }
+
+    #[OA\Get(
+        path: '/api/customers/{phone}',
+        operationId: 'showCustomer',
+        tags: ['Customers'],
+        summary: 'Get a single customer by phone number',
+        parameters: [
+            new OA\Parameter(
+                name: 'phone',
+                description: 'Customer phone number (primary key)',
+                in: 'path',
+                required: true,
+                schema: new OA\Schema(type: 'string', example: '01012345678')
+            ),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Customer fetched successfully',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'success', type: 'boolean', example: true),
+                        new OA\Property(
+                            property: 'data',
+                            type: 'object',
+                            properties: [
+                                new OA\Property(property: 'phone', type: 'string', example: '01012345678'),
+                                new OA\Property(property: 'name', type: 'string', example: 'محمد أحمد'),
+                                new OA\Property(property: 'address', type: 'string', example: 'القاهرة - مدينة نصر'),
+                                new OA\Property(property: 'auto_reply', type: 'boolean', example: true),
+                                new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
+                                new OA\Property(property: 'updated_at', type: 'string', format: 'date-time'),
+                            ]
+                        ),
+                    ]
+                )
+            ),
+            new OA\Response(response: 404, description: 'Customer not found'),
+        ]
+    )]
+    public function apiShowCustomer(string $phone): JsonResponse
+    {
+        $customer = Customer::query()->find($phone);
+
+        if (! $customer) {
+            return response()->json(['success' => false, 'message' => 'المستخدم غير موجود.'], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $this->transformCustomerForApi($customer, $this->loadAutoReplySettings()),
+        ]);
+    }
+
+    #[OA\Post(
+        path: '/api/customers',
+        operationId: 'storeCustomer',
+        tags: ['Customers'],
+        summary: 'Create a new customer',
+        description: 'The phone number is the primary key and cannot be changed after creation.',
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['phone', 'name'],
+                properties: [
+                    new OA\Property(property: 'phone', type: 'string', example: '01012345678'),
+                    new OA\Property(property: 'name', type: 'string', example: 'محمد أحمد'),
+                    new OA\Property(property: 'address', type: 'string', example: 'القاهرة - مدينة نصر', nullable: true),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(
+                response: 201,
+                description: 'Customer created successfully',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'success', type: 'boolean', example: true),
+                        new OA\Property(property: 'message', type: 'string', example: 'تم إضافة المستخدم بنجاح.'),
+                        new OA\Property(property: 'data', type: 'object'),
+                    ]
+                )
+            ),
+            new OA\Response(response: 422, description: 'Validation error — phone already exists or missing required fields'),
+        ]
+    )]
+    public function apiStoreCustomer(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'phone' => ['required', 'string', 'max:20', 'unique:customers,phone'],
+            'name' => ['required', 'string', 'max:255'],
+            'address' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $customer = Customer::query()->create($validated);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم إضافة المستخدم بنجاح.',
+            'data' => $this->transformCustomerForApi($customer, $this->loadAutoReplySettings()),
+        ], 201);
+    }
+
+    #[OA\Put(
+        path: '/api/customers/{phone}',
+        operationId: 'updateCustomer',
+        tags: ['Customers'],
+        summary: 'Update customer name or address',
+        description: 'The phone number cannot be changed. Only name and address can be updated.',
+        parameters: [
+            new OA\Parameter(
+                name: 'phone',
+                description: 'Customer phone number (primary key)',
+                in: 'path',
+                required: true,
+                schema: new OA\Schema(type: 'string', example: '01012345678')
+            ),
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['name'],
+                properties: [
+                    new OA\Property(property: 'name', type: 'string', example: 'محمد أحمد محدث'),
+                    new OA\Property(property: 'address', type: 'string', example: 'الإسكندرية - سيدي بشر', nullable: true),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Customer updated successfully'),
+            new OA\Response(response: 404, description: 'Customer not found'),
+            new OA\Response(response: 422, description: 'Validation error'),
+        ]
+    )]
+    public function apiUpdateCustomer(Request $request, string $phone): JsonResponse
+    {
+        $customer = Customer::query()->find($phone);
+
+        if (! $customer) {
+            return response()->json(['success' => false, 'message' => 'المستخدم غير موجود.'], 404);
+        }
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'address' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $customer->update($validated);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم تحديث بيانات المستخدم بنجاح.',
+            'data' => $this->transformCustomerForApi($customer->fresh(), $this->loadAutoReplySettings()),
+        ]);
+    }
+
+    #[OA\Delete(
+        path: '/api/customers/{phone}',
+        operationId: 'deleteCustomer',
+        tags: ['Customers'],
+        summary: 'Delete a customer',
+        parameters: [
+            new OA\Parameter(
+                name: 'phone',
+                description: 'Customer phone number (primary key)',
+                in: 'path',
+                required: true,
+                schema: new OA\Schema(type: 'string', example: '01012345678')
+            ),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Customer deleted successfully'),
+            new OA\Response(response: 404, description: 'Customer not found'),
+        ]
+    )]
+    public function apiDestroyCustomer(string $phone): JsonResponse
+    {
+        $customer = Customer::query()->find($phone);
+
+        if (! $customer) {
+            return response()->json(['success' => false, 'message' => 'المستخدم غير موجود.'], 404);
+        }
+
+        $customer->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم حذف المستخدم بنجاح.',
+        ]);
     }
 
     // ─── Settings ────────────────────────────────────────────────────────────
@@ -1268,6 +2041,7 @@ class AuthController extends Controller
             'evo_url' => '',
             'evo_api_key' => '',
             'evo_instance' => '',
+            'campaign_phone_limit' => '100',
         ];
 
         $stored = Setting::query()
@@ -1300,6 +2074,7 @@ class AuthController extends Controller
             'evo_url' => ['nullable', 'url', 'max:2048'],
             'evo_api_key' => ['nullable', 'string', 'max:500'],
             'evo_instance' => ['nullable', 'string', 'max:255'],
+            'campaign_phone_limit' => ['nullable', 'integer', 'min:1', 'max:10000'],
         ]);
 
         foreach ($validated as $key => $value) {
@@ -1522,6 +2297,42 @@ class AuthController extends Controller
             'promo_videos' => $promoVideos,
             'created_at' => optional($product->created_at)?->toISOString(),
             'updated_at' => optional($product->updated_at)?->toISOString(),
+        ];
+    }
+
+    private function loadAutoReplySettings(): array
+    {
+        $globalRaw = (string) (Setting::query()->where('key', 'whatsapp_auto_reply_global_enabled')->value('value') ?? '0');
+        $global    = in_array(strtolower($globalRaw), ['1', 'true', 'on', 'yes'], true);
+
+        $overridesRaw = Setting::query()->where('key', 'whatsapp_auto_reply_chat_overrides')->value('value');
+        $overrides    = [];
+        if (is_string($overridesRaw) && trim($overridesRaw) !== '') {
+            $decoded = json_decode($overridesRaw, true);
+            if (is_array($decoded)) {
+                $overrides = $decoded;
+            }
+        }
+
+        return ['global' => $global, 'overrides' => $overrides];
+    }
+
+    private function transformCustomerForApi(Customer $customer, array $autoReply = []): array
+    {
+        $global    = $autoReply['global'] ?? false;
+        $overrides = $autoReply['overrides'] ?? [];
+        $chatId    = $customer->phone.'@s.whatsapp.net';
+        $autoReplyEnabled = array_key_exists($chatId, $overrides)
+            ? (bool) $overrides[$chatId]
+            : $global;
+
+        return [
+            'phone'       => $customer->phone,
+            'name'        => $customer->name,
+            'address'     => $customer->address,
+            'auto_reply'  => $autoReplyEnabled,
+            'created_at'  => optional($customer->created_at)?->toISOString(),
+            'updated_at'  => optional($customer->updated_at)?->toISOString(),
         ];
     }
 

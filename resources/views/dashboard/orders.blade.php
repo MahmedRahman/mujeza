@@ -18,17 +18,14 @@
             <p style="margin:0; color:#6b7280;">لا توجد طلبات بعد.</p>
         @else
             <div style="overflow-x:auto;">
-                <table style="width: 100%; border-collapse: collapse; min-width: 920px;">
+                <table style="width: 100%; border-collapse: collapse; min-width: 600px;">
                     <thead>
                         <tr style="background: #f8f2de;">
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">رقم الطلب</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">اسم العميل</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">تليفون</th>
-                            <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">عنوان التوصيل</th>
-                            <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">العناصر المطلوبة</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">الحالة</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">تاريخ الإدخال</th>
-                            <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">الإجمالي</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">الإجراءات</th>
                         </tr>
                     </thead>
@@ -46,14 +43,6 @@
                                         {{ $order->phone }}
                                     </a>
                                 </td>
-                                <td style="padding: 10px; border: 1px solid #efe3b7; color:#374151; font-weight:600;">
-                                    {{ $order->delivery_address ?: '—' }}
-                                </td>
-                                <td style="padding: 10px; border: 1px solid #efe3b7; color:#374151; font-weight:600; max-width: 260px;">
-                                    <div style="white-space: normal; word-break: break-word;">
-                                        {{ $order->items_text ?: '—' }}
-                                    </div>
-                                </td>
                                 <td style="padding: 10px; border: 1px solid #efe3b7; color:#374151;">
                                     {{ $order->status }}
                                 </td>
@@ -62,9 +51,6 @@
                                     <div style="font-size:12px; font-weight:600; color:#6b7280;">
                                         {{ $order->created_at?->diffForHumans() ?? '' }}
                                     </div>
-                                </td>
-                                <td style="padding: 10px; border: 1px solid #efe3b7; font-weight:800;">
-                                    {{ number_format((float) $order->total_amount, 2) }} د.ك
                                 </td>
                                 <td style="padding: 10px; border: 1px solid #efe3b7;">
                                     <div style="display:flex; gap:8px; flex-wrap:wrap;">

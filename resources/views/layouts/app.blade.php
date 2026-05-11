@@ -177,6 +177,8 @@
 
             <nav class="nav">
                 <a class="{{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">الرئيسية</a>
+                <a class="{{ request()->routeIs('customers.*') ? 'active' : '' }}" href="{{ route('customers.index') }}">المستخدمين</a>
+                <a class="{{ request()->routeIs('campaigns.*') ? 'active' : '' }}" href="{{ route('campaigns.index') }}">حملات إعلانية</a>
                 <a class="{{ request()->routeIs('products.*') ? 'active' : '' }}" href="{{ route('products.index') }}">المنتجات</a>
                 <a class="{{ request()->routeIs('orders.*') ? 'active' : '' }}" href="{{ route('orders.index') }}">الطلبات</a>
                 <a class="{{ request()->routeIs('branches.*') ? 'active' : '' }}" href="{{ route('branches.index') }}">الفروع</a>

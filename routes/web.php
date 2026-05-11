@@ -19,6 +19,22 @@ Route::middleware('auth')->group(function () {
     Route::get('/diseases', [AuthController::class, 'diseases'])->name('diseases.index');
     Route::get('/diseases/create', [AuthController::class, 'createDisease'])->name('diseases.create');
     Route::post('/diseases', [AuthController::class, 'storeDisease'])->name('diseases.store');
+    Route::get('/customers', [AuthController::class, 'customers'])->name('customers.index');
+    Route::get('/customers/create', [AuthController::class, 'createCustomer'])->name('customers.create');
+    Route::post('/customers', [AuthController::class, 'storeCustomer'])->name('customers.store');
+    Route::get('/customers/{customer}/edit', [AuthController::class, 'editCustomer'])->name('customers.edit');
+    Route::put('/customers/{customer}', [AuthController::class, 'updateCustomer'])->name('customers.update');
+    Route::delete('/customers/{customer}', [AuthController::class, 'destroyCustomer'])->name('customers.destroy');
+
+    Route::get('/campaigns', [AuthController::class, 'campaigns'])->name('campaigns.index');
+    Route::get('/campaigns/create', [AuthController::class, 'createCampaign'])->name('campaigns.create');
+    Route::post('/campaigns', [AuthController::class, 'storeCampaign'])->name('campaigns.store');
+    Route::get('/campaigns/{campaign}', [AuthController::class, 'showCampaign'])->name('campaigns.show');
+    Route::post('/campaigns/{campaign}/dispatch', [AuthController::class, 'dispatchCampaign'])->name('campaigns.dispatch');
+    Route::post('/campaigns/{campaign}/cancel', [AuthController::class, 'cancelCampaign'])->name('campaigns.cancel');
+    Route::post('/campaigns/{campaign}/resend', [AuthController::class, 'resendCampaign'])->name('campaigns.resend');
+    Route::delete('/campaigns/{campaign}', [AuthController::class, 'destroyCampaign'])->name('campaigns.destroy');
+
     Route::get('/products', [AuthController::class, 'products'])->name('products.index');
     Route::get('/products/create', [AuthController::class, 'createProduct'])->name('products.create');
     Route::post('/products', [AuthController::class, 'storeProduct'])->name('products.store');

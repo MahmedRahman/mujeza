@@ -9,6 +9,10 @@
         {
             "url": "https://app.taheelplus.com",
             "description": "Production API server"
+        },
+        {
+            "url": "http://127.0.0.1:8000",
+            "description": "Local development server"
         }
     ],
     "paths": {
@@ -109,6 +113,63 @@
                     },
                     "422": {
                         "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/api/products/search-by-disease": {
+            "get": {
+                "tags": [
+                    "Products"
+                ],
+                "summary": "Search recommended products by disease name",
+                "description": "Returns available products that are recommended for a given disease. The search is partial and case-insensitive — sending \"سكر\" will match \"مرض السكري\" etc.",
+                "operationId": "searchProductsByDisease",
+                "parameters": [
+                    {
+                        "name": "disease",
+                        "in": "query",
+                        "description": "Disease name to search for (partial match)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "السكري"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Products fetched successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "disease": {
+                                            "type": "string",
+                                            "example": "السكري"
+                                        },
+                                        "count": {
+                                            "type": "integer",
+                                            "example": 3
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "حقل disease مطلوب"
                     }
                 }
             }
@@ -379,7 +440,7 @@
                     "Orders"
                 ],
                 "summary": "Get order status",
-                "description": "Returns latest order status and all matching orders by order_number or customer_name or phone.",
+                "description": "Returns latest order status and all matching orders by order_number, customer_name, or phone. When searching by phone, cancelled (\"ملغي\") and delivered (\"تم التسليم\") orders are excluded by default — pass include_closed=1 to include them.",
                 "operationId": "getOrderStatusByPhone",
                 "parameters": [
                     {
@@ -405,8 +466,88 @@
                     {
                         "name": "phone",
                         "in": "query",
-                        "description": "Customer phone number (optional fallback)",
+                        "description": "Customer phone number",
                         "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "96550000000"
+                        }
+                    },
+                    {
+                        "name": "include_closed",
+                        "in": "query",
+                        "description": "Set to 1 to include cancelled and delivered orders (only applies to phone search)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 0,
+                            "enum": [
+                                0,
+                                1
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Order status fetched successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "found": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "latest_status": {
+                                            "type": "string",
+                                            "example": "قيد المعالجة",
+                                            "nullable": true
+                                        },
+                                        "count": {
+                                            "type": "integer",
+                                            "example": 2
+                                        },
+                                        "latest_order": {
+                                            "type": "object",
+                                            "nullable": true
+                                        },
+                                        "orders": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/api/orders/by-phone": {
+            "get": {
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "Get active orders by phone number",
+                "description": "Returns all orders for the given phone number, excluding cancelled (\"ملغي\") and delivered (\"تم التسليم\") orders.",
+                "operationId": "getOrdersByPhone",
+                "parameters": [
+                    {
+                        "name": "phone",
+                        "in": "query",
+                        "description": "Customer phone number",
+                        "required": true,
                         "schema": {
                             "type": "string",
                             "example": "96550000000"
@@ -415,10 +556,37 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Order status fetched successfully"
+                        "description": "Orders fetched successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "phone": {
+                                            "type": "string",
+                                            "example": "96550000000"
+                                        },
+                                        "count": {
+                                            "type": "integer",
+                                            "example": 2
+                                        },
+                                        "orders": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "422": {
-                        "description": "Validation error"
+                        "description": "حقل phone مطلوب"
                     }
                 }
             }
@@ -462,6 +630,465 @@
                                 }
                             }
                         }
+                    }
+                }
+            }
+        },
+        "/api/faqs": {
+            "get": {
+                "tags": [
+                    "FAQs"
+                ],
+                "summary": "Get active FAQs list",
+                "description": "Returns all active frequently asked questions ordered by sort_order.",
+                "operationId": "getFaqs",
+                "responses": {
+                    "200": {
+                        "description": "FAQs fetched successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer",
+                                                        "example": 1
+                                                    },
+                                                    "question": {
+                                                        "type": "string",
+                                                        "example": "ما هي فوائد عسل السدر؟"
+                                                    },
+                                                    "answer": {
+                                                        "type": "string",
+                                                        "example": "عسل السدر غني بالمعادن والفيتامينات..."
+                                                    },
+                                                    "sort_order": {
+                                                        "type": "integer",
+                                                        "example": 0
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/faqs/text": {
+            "get": {
+                "tags": [
+                    "FAQs"
+                ],
+                "summary": "Get all active FAQs as a single text block",
+                "description": "Returns all active FAQs combined into one text string — questions and answers concatenated together, useful for AI agents and prompts.",
+                "operationId": "getFaqsAsText",
+                "responses": {
+                    "200": {
+                        "description": "FAQs text fetched successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "string",
+                                            "example": "س: ما هي فوائد عسل السدر؟\nج: عسل السدر غني بالمعادن والفيتامينات ويُقوّي جهاز المناعة.\n\nس: هل يمكن تناوله يومياً؟\nج: نعم، ملعقة كبيرة صباحاً على الريق."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/customers/check": {
+            "get": {
+                "tags": [
+                    "Customers"
+                ],
+                "summary": "التحقق من تسجيل رقم هاتف",
+                "description": "يتحقق إذا كان الرقم مسجلاً. إذا كان مسجلاً تُرجع بياناته مسطّحة في نفس مستوى registered، وإلا يُرجع registered: false.",
+                "operationId": "checkCustomer",
+                "parameters": [
+                    {
+                        "name": "phone",
+                        "in": "query",
+                        "description": "رقم الهاتف المراد التحقق منه",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "01012345678"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "نتيجة التحقق",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "oneOf": [
+                                        {
+                                            "title": "مسجل",
+                                            "properties": {
+                                                "registered": {
+                                                    "type": "boolean",
+                                                    "example": true
+                                                },
+                                                "phone": {
+                                                    "type": "string",
+                                                    "example": "01012345678"
+                                                },
+                                                "name": {
+                                                    "type": "string",
+                                                    "example": "محمد أحمد"
+                                                },
+                                                "address": {
+                                                    "type": "string",
+                                                    "example": "القاهرة - مدينة نصر",
+                                                    "nullable": true
+                                                },
+                                                "auto_reply": {
+                                                    "type": "boolean",
+                                                    "example": true
+                                                },
+                                                "created_at": {
+                                                    "type": "string",
+                                                    "format": "date-time"
+                                                },
+                                                "updated_at": {
+                                                    "type": "string",
+                                                    "format": "date-time"
+                                                }
+                                            },
+                                            "type": "object"
+                                        },
+                                        {
+                                            "title": "غير مسجل",
+                                            "properties": {
+                                                "registered": {
+                                                    "type": "boolean",
+                                                    "example": false
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "example": "هذا الرقم غير مسجل."
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "حقل phone مطلوب"
+                    }
+                }
+            }
+        },
+        "/api/customers": {
+            "get": {
+                "tags": [
+                    "Customers"
+                ],
+                "summary": "Get customers list",
+                "description": "Returns all customers. Supports optional search by name, phone, or address.",
+                "operationId": "getCustomers",
+                "parameters": [
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "description": "Search query (optional) — searches name, phone, address",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "محمد"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Customers fetched successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "count": {
+                                            "type": "integer",
+                                            "example": 5
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "phone": {
+                                                        "type": "string",
+                                                        "example": "01012345678"
+                                                    },
+                                                    "name": {
+                                                        "type": "string",
+                                                        "example": "محمد أحمد"
+                                                    },
+                                                    "address": {
+                                                        "type": "string",
+                                                        "example": "القاهرة - مدينة نصر"
+                                                    },
+                                                    "auto_reply": {
+                                                        "type": "boolean",
+                                                        "example": true
+                                                    },
+                                                    "created_at": {
+                                                        "type": "string",
+                                                        "format": "date-time",
+                                                        "example": "2026-05-10T18:00:00Z"
+                                                    },
+                                                    "updated_at": {
+                                                        "type": "string",
+                                                        "format": "date-time",
+                                                        "example": "2026-05-10T18:00:00Z"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Customers"
+                ],
+                "summary": "Create a new customer",
+                "description": "The phone number is the primary key and cannot be changed after creation.",
+                "operationId": "storeCustomer",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "phone",
+                                    "name"
+                                ],
+                                "properties": {
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "01012345678"
+                                    },
+                                    "name": {
+                                        "type": "string",
+                                        "example": "محمد أحمد"
+                                    },
+                                    "address": {
+                                        "type": "string",
+                                        "example": "القاهرة - مدينة نصر",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Customer created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "تم إضافة المستخدم بنجاح."
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error — phone already exists or missing required fields"
+                    }
+                }
+            }
+        },
+        "/api/customers/{phone}": {
+            "get": {
+                "tags": [
+                    "Customers"
+                ],
+                "summary": "Get a single customer by phone number",
+                "operationId": "showCustomer",
+                "parameters": [
+                    {
+                        "name": "phone",
+                        "in": "path",
+                        "description": "Customer phone number (primary key)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "01012345678"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Customer fetched successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "phone": {
+                                                    "type": "string",
+                                                    "example": "01012345678"
+                                                },
+                                                "name": {
+                                                    "type": "string",
+                                                    "example": "محمد أحمد"
+                                                },
+                                                "address": {
+                                                    "type": "string",
+                                                    "example": "القاهرة - مدينة نصر"
+                                                },
+                                                "auto_reply": {
+                                                    "type": "boolean",
+                                                    "example": true
+                                                },
+                                                "created_at": {
+                                                    "type": "string",
+                                                    "format": "date-time"
+                                                },
+                                                "updated_at": {
+                                                    "type": "string",
+                                                    "format": "date-time"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Customer not found"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Customers"
+                ],
+                "summary": "Update customer name or address",
+                "description": "The phone number cannot be changed. Only name and address can be updated.",
+                "operationId": "updateCustomer",
+                "parameters": [
+                    {
+                        "name": "phone",
+                        "in": "path",
+                        "description": "Customer phone number (primary key)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "01012345678"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "محمد أحمد محدث"
+                                    },
+                                    "address": {
+                                        "type": "string",
+                                        "example": "الإسكندرية - سيدي بشر",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Customer updated successfully"
+                    },
+                    "404": {
+                        "description": "Customer not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Customers"
+                ],
+                "summary": "Delete a customer",
+                "operationId": "deleteCustomer",
+                "parameters": [
+                    {
+                        "name": "phone",
+                        "in": "path",
+                        "description": "Customer phone number (primary key)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "01012345678"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Customer deleted successfully"
+                    },
+                    "404": {
+                        "description": "Customer not found"
                     }
                 }
             }
@@ -636,6 +1263,14 @@
         {
             "name": "AI Agent",
             "description": "AI Agent"
+        },
+        {
+            "name": "FAQs",
+            "description": "FAQs"
+        },
+        {
+            "name": "Customers",
+            "description": "Customers"
         },
         {
             "name": "WhatsApp",

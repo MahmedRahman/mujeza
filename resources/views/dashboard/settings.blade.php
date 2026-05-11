@@ -124,6 +124,25 @@
                 </div>
             </div>
 
+            <h3 style="margin: 20px 0 10px; font-weight: 800;">إعدادات الحملات الإعلانية</h3>
+            <p style="margin: 0 0 10px; color: #4b5563; font-weight: 500; font-size: 14px;">
+                حدد الحد الأقصى لعدد الأرقام التي يمكن إرسال الحملة الواحدة إليها.
+            </p>
+            <div style="margin-bottom: 20px; max-width: 300px;">
+                <label style="display: block; margin-bottom: 6px; font-weight: 700;">
+                    الحد الأقصى للأرقام في الحملة الواحدة
+                </label>
+                <input
+                    name="campaign_phone_limit"
+                    type="number"
+                    min="1"
+                    max="10000"
+                    value="{{ old('campaign_phone_limit', $settings['campaign_phone_limit'] ?? 100) }}"
+                    style="width: 100%; border: 1px solid #d1d5db; border-radius: 8px; padding: 10px; font-family: inherit;"
+                >
+                <p style="margin: 5px 0 0; font-size: 12px; color: #6b7280;">الافتراضي: 100 رقم</p>
+            </div>
+
             <button type="submit" style="border: none; background: #d4af37; color: #111827; padding: 10px 16px; border-radius: 8px; font-weight: 700; font-family: inherit;">
                 حفظ التعديلات
             </button>
