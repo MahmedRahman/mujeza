@@ -385,7 +385,7 @@
                     "Orders"
                 ],
                 "summary": "Create order",
-                "description": "Creates a new order. The items field must be a single text value describing requested products.",
+                "description": "Creates a new order. The items field must be a single text value describing requested products. Pass remote_jid to auto-fill customer name and phone from the customers table.",
                 "operationId": "storeOrder",
                 "requestBody": {
                     "required": true,
@@ -393,22 +393,18 @@
                         "application/json": {
                             "schema": {
                                 "required": [
-                                    "customer_name",
-                                    "delivery_address",
                                     "items"
                                 ],
                                 "properties": {
-                                    "customer_name": {
+                                    "remote_jid": {
                                         "type": "string",
-                                        "example": "محمد أحمد"
+                                        "example": "96550000000@s.whatsapp.net",
+                                        "nullable": true
                                     },
                                     "delivery_address": {
                                         "type": "string",
-                                        "example": "الكويت - حولي - شارع بيروت - قطعة 4 - منزل 12"
-                                    },
-                                    "phone": {
-                                        "type": "string",
-                                        "example": "96550000000"
+                                        "example": "الكويت - حولي - شارع بيروت - قطعة 4 - منزل 12",
+                                        "nullable": true
                                     },
                                     "status": {
                                         "type": "string",

@@ -581,7 +581,7 @@ class AuthController extends Controller
             'ملغي',
         ];
 
-        $customers = Customer::query()->orderBy('name')->get(['phone', 'name', 'address']);
+        $customers = Customer::query()->orderBy('name')->get(['remote_jid', 'phone', 'name', 'address']);
 
         return view('dashboard.orders-create', [
             'statuses'  => $statuses,
@@ -609,8 +609,7 @@ class AuthController extends Controller
     public function storeOrder(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'customer_name'    => ['required', 'string', 'max:255'],
-            'phone'            => ['nullable', 'string', 'max:50'],
+            'remote_jid'       => ['nullable', 'string', 'max:255'],
             'delivery_address' => ['nullable', 'string', 'max:2000'],
             'items'            => ['required', 'string', 'max:5000'],
             'status'           => ['required', 'string', 'max:100'],
@@ -618,10 +617,14 @@ class AuthController extends Controller
 
         $orderNumber = (int) (Order::query()->max('order_number') ?? 0) + 1;
 
+        $remoteJid = trim((string) ($validated['remote_jid'] ?? ''));
+        $customer  = $remoteJid ? Customer::query()->where('remote_jid', $remoteJid)->first() : null;
+
         Order::query()->create([
             'order_number'     => $orderNumber,
-            'customer_name'    => $validated['customer_name'],
-            'phone'            => trim((string) ($validated['phone'] ?? '')),
+            'remote_jid'       => $remoteJid ?: null,
+            'customer_name'    => $customer?->name,
+            'phone'            => $customer?->phone,
             'delivery_address' => trim((string) ($validated['delivery_address'] ?? '')),
             'items_text'       => trim((string) $validated['items']),
             'status'           => $validated['status'],
@@ -636,15 +639,18 @@ class AuthController extends Controller
     public function updateOrder(Request $request, Order $order): RedirectResponse
     {
         $validated = $request->validate([
-            'customer_name'    => ['required', 'string', 'max:255'],
-            'phone'            => ['required', 'string', 'max:50'],
+            'remote_jid'       => ['nullable', 'string', 'max:255'],
             'delivery_address' => ['nullable', 'string', 'max:2000'],
             'status'           => ['required', 'string', 'max:100'],
         ]);
 
+        $remoteJid = trim((string) ($validated['remote_jid'] ?? ''));
+        $customer  = $remoteJid ? Customer::query()->where('remote_jid', $remoteJid)->first() : null;
+
         $order->update([
-            'customer_name'    => $validated['customer_name'],
-            'phone'            => $validated['phone'],
+            'remote_jid'       => $remoteJid ?: null,
+            'customer_name'    => $customer?->name ?? $order->customer_name,
+            'phone'            => $customer?->phone ?? $order->phone,
             'delivery_address' => trim((string) ($validated['delivery_address'] ?? '')),
             'status'           => $validated['status'],
         ]);
@@ -1136,15 +1142,14 @@ class AuthController extends Controller
         operationId: 'storeOrder',
         tags: ['Orders'],
         summary: 'Create order',
-        description: 'Creates a new order. The items field must be a single text value describing requested products.',
+        description: 'Creates a new order. The items field must be a single text value describing requested products. Pass remote_jid to auto-fill customer name and phone from the customers table.',
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
-                required: ['customer_name', 'delivery_address', 'items'],
+                required: ['items'],
                 properties: [
-                    new OA\Property(property: 'customer_name', type: 'string', example: 'محمد أحمد'),
-                    new OA\Property(property: 'delivery_address', type: 'string', example: 'الكويت - حولي - شارع بيروت - قطعة 4 - منزل 12'),
-                    new OA\Property(property: 'phone', type: 'string', example: '96550000000'),
+                    new OA\Property(property: 'remote_jid', type: 'string', example: '96550000000@s.whatsapp.net', nullable: true),
+                    new OA\Property(property: 'delivery_address', type: 'string', example: 'الكويت - حولي - شارع بيروت - قطعة 4 - منزل 12', nullable: true),
                     new OA\Property(property: 'status', type: 'string', example: 'قيد المعالجة'),
                     new OA\Property(property: 'items', type: 'string', example: 'عسل سدر 2 عبوة + عسل كشميري 1 عبوة'),
                 ]
@@ -1168,24 +1173,26 @@ class AuthController extends Controller
         }
 
         $validated = $request->validate([
-            'customer_name' => ['required', 'string', 'max:255'],
-            'delivery_address' => ['required', 'string', 'max:2000'],
-            'phone' => ['nullable', 'string', 'max:50'],
-            'status' => ['nullable', 'string', 'max:100'],
-            'items' => ['required', 'string', 'max:5000'],
+            'remote_jid'       => ['nullable', 'string', 'max:255'],
+            'delivery_address' => ['nullable', 'string', 'max:2000'],
+            'status'           => ['nullable', 'string', 'max:100'],
+            'items'            => ['required', 'string', 'max:5000'],
         ]);
 
         $order = DB::transaction(function () use ($validated) {
             $orderNumber = (int) (Order::query()->max('order_number') ?? 0) + 1;
+            $remoteJid   = trim((string) ($validated['remote_jid'] ?? ''));
+            $customer    = $remoteJid ? Customer::query()->where('remote_jid', $remoteJid)->first() : null;
 
             return Order::query()->create([
-                'order_number' => $orderNumber,
-                'customer_name' => $validated['customer_name'],
-                'delivery_address' => trim((string) $validated['delivery_address']),
-                'items_text' => trim((string) $validated['items']),
-                'phone' => trim((string) ($validated['phone'] ?? '')),
-                'status' => $validated['status'] ?? 'قيد المعالجة',
-                'total_amount' => 0,
+                'order_number'     => $orderNumber,
+                'remote_jid'       => $remoteJid ?: null,
+                'customer_name'    => $customer?->name,
+                'phone'            => $customer?->phone,
+                'delivery_address' => trim((string) ($validated['delivery_address'] ?? '')),
+                'items_text'       => trim((string) $validated['items']),
+                'status'           => $validated['status'] ?? 'قيد المعالجة',
+                'total_amount'     => 0,
             ]);
         });
 
@@ -2492,15 +2499,17 @@ class AuthController extends Controller
         }
 
         return [
-            'id' => $order->id,
-            'order_number' => $order->order_number,
-            'customer_name' => $order->customer_name,
+            'id'               => $order->id,
+            'order_number'     => $order->order_number,
+            'remote_jid'       => $order->remote_jid,
+            'customer_name'    => $order->customer_name,
+            'phone'            => $order->phone,
             'delivery_address' => $order->delivery_address,
-            'status' => $order->status,
-            'total_amount' => (float) $order->total_amount,
-            'items' => $itemsText,
-            'created_at' => optional($order->created_at)?->toISOString(),
-            'updated_at' => optional($order->updated_at)?->toISOString(),
+            'status'           => $order->status,
+            'total_amount'     => (float) $order->total_amount,
+            'items'            => $itemsText,
+            'created_at'       => optional($order->created_at)?->toISOString(),
+            'updated_at'       => optional($order->updated_at)?->toISOString(),
         ];
     }
 

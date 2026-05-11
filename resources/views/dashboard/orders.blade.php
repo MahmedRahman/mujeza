@@ -22,8 +22,7 @@
                     <thead>
                         <tr style="background: #f8f2de;">
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">رقم الطلب</th>
-                            <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">اسم العميل</th>
-                            <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">تليفون</th>
+                            <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">remoteJid</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">الحالة</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">تاريخ الإدخال</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">الإجراءات</th>
@@ -35,13 +34,11 @@
                                 <td style="padding: 10px; border: 1px solid #efe3b7; font-weight:700;">
                                     {{ $order->order_number }}
                                 </td>
-                                <td style="padding: 10px; border: 1px solid #efe3b7;">
-                                    {{ $order->customer_name }}
-                                </td>
-                                <td style="padding: 10px; border: 1px solid #efe3b7;">
-                                    <a href="tel:{{ $order->phone }}" style="color:#1d4ed8; text-decoration:none; font-weight:700;">
-                                        {{ $order->phone }}
-                                    </a>
+                                <td style="padding: 10px; border: 1px solid #efe3b7; font-size:13px; direction:ltr; text-align:right;">
+                                    <span style="font-family:monospace; color:#4b5563;">{{ $order->remote_jid ?? '—' }}</span>
+                                    @if($order->customer_name)
+                                        <div style="font-size:12px; color:#6b7280; direction:rtl; text-align:right;">{{ $order->customer_name }}</div>
+                                    @endif
                                 </td>
                                 <td style="padding: 10px; border: 1px solid #efe3b7; color:#374151;">
                                     {{ $order->status }}

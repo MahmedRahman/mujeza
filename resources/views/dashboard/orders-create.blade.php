@@ -6,9 +6,6 @@
 @section('content')
     <section class="card">
         <h2 style="margin-top: 0; font-weight: 700;">إنشاء طلب</h2>
-        <p style="margin-bottom: 14px; color: #4b5563; font-weight: 500;">
-            أدخل بيانات العميل والمنتجات المطلوبة.
-        </p>
 
         @if ($errors->any())
             <div style="background: #fff1f2; color: #be123c; border: 1px solid #fecdd3; border-radius: 10px; padding: 10px 12px; margin-bottom: 12px;">
@@ -22,7 +19,7 @@
 
         {{-- بيانات العملاء المسجلين لـ JS --}}
         <script>
-            const registeredCustomers = @json($customers->keyBy('phone'));
+            const registeredCustomers = @json($customers->keyBy('remote_jid'));
         </script>
 
         <form method="POST" action="{{ route('orders.store') }}">
@@ -30,36 +27,30 @@
 
             <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 14px;">
 
-                {{-- تليفون العميل --}}
+                {{-- remoteJid --}}
                 <div style="grid-column: 1 / -1;">
-                    <label style="display:block; margin-bottom:6px; font-weight:700;">تليفون العميل</label>
+                    <label style="display:block; margin-bottom:6px; font-weight:700;">remoteJid</label>
 
                     @if ($customers->isNotEmpty())
-                        <select id="phone-select" style="width:100%; border:1px solid #d1d5db; border-radius:8px; padding:10px; font-family:inherit; margin-bottom:8px;">
+                        <select id="remote-jid-select" style="width:100%; border:1px solid #d1d5db; border-radius:8px; padding:10px; font-family:inherit; margin-bottom:8px;">
                             <option value="">-- اختر عميل مسجل --</option>
                             @foreach ($customers as $c)
-                                <option value="{{ $c->phone }}" data-name="{{ $c->name }}" data-address="{{ $c->address }}">
-                                    {{ $c->phone }} — {{ $c->name }}
+                                <option value="{{ $c->remote_jid }}" data-address="{{ $c->address }}">
+                                    {{ $c->remote_jid }}{{ $c->name ? ' — ' . $c->name : '' }}
                                 </option>
                             @endforeach
-                            <option value="__new__">✏️ كتابة رقم جديد</option>
+                            <option value="__new__">✏️ إدخال remoteJid يدوياً</option>
                         </select>
                     @endif
 
                     <input
-                        id="phone-input"
-                        name="phone"
+                        id="remote-jid-input"
+                        name="remote_jid"
                         type="text"
-                        value="{{ old('phone') }}"
-                        placeholder="اكتب رقم التليفون"
-                        style="width:100%; border:1px solid #d1d5db; border-radius:8px; padding:10px; font-family:inherit; {{ $customers->isNotEmpty() ? 'display:none;' : '' }}"
+                        value="{{ old('remote_jid') }}"
+                        placeholder="مثال: 96550000000@s.whatsapp.net"
+                        style="width:100%; border:1px solid #d1d5db; border-radius:8px; padding:10px; font-family:monospace; font-size:14px; direction:ltr; {{ $customers->isNotEmpty() ? 'display:none;' : '' }}"
                     >
-                </div>
-
-                {{-- اسم العميل --}}
-                <div>
-                    <label style="display:block; margin-bottom:6px; font-weight:700;">اسم العميل</label>
-                    <input id="customer-name" name="customer_name" type="text" value="{{ old('customer_name') }}" required style="width:100%; border:1px solid #d1d5db; border-radius:8px; padding:10px; font-family:inherit;">
                 </div>
 
                 {{-- عنوان التوصيل --}}
@@ -70,13 +61,13 @@
 
                 {{-- المنتجات --}}
                 <div style="grid-column: 1 / -1;">
-                    <label style="display:block; margin-bottom:6px; font-weight:700;">المنتجات المطلوبة</label>
+                    <label style="display:block; margin-bottom:6px; font-weight:700;">المنتجات المطلوبة <span style="color:#b91c1c;">*</span></label>
                     <textarea name="items" rows="4" required placeholder="مثال: عسل سدر 2 عبوة + عسل كشميري 1 عبوة" style="width:100%; border:1px solid #d1d5db; border-radius:8px; padding:10px; font-family:inherit; resize:vertical;">{{ old('items') }}</textarea>
                 </div>
 
                 {{-- حالة الطلب --}}
                 <div>
-                    <label style="display:block; margin-bottom:6px; font-weight:700;">حالة الطلب</label>
+                    <label style="display:block; margin-bottom:6px; font-weight:700;">حالة الطلب <span style="color:#b91c1c;">*</span></label>
                     <select name="status" style="width:100%; border:1px solid #d1d5db; border-radius:8px; padding:10px; font-family:inherit;" required>
                         <option value="">-- اختر --</option>
                         @foreach ($statuses as $st)
@@ -98,35 +89,28 @@
     </section>
 
     <script>
-        const phoneSelect  = document.getElementById('phone-select');
-        const phoneInput   = document.getElementById('phone-input');
-        const nameInput    = document.getElementById('customer-name');
-        const addressInput = document.getElementById('delivery-address');
+        const remoteJidSelect  = document.getElementById('remote-jid-select');
+        const remoteJidInput   = document.getElementById('remote-jid-input');
+        const addressInput     = document.getElementById('delivery-address');
 
-        if (phoneSelect) {
-            phoneSelect.addEventListener('change', function () {
+        if (remoteJidSelect) {
+            remoteJidSelect.addEventListener('change', function () {
                 const val = this.value;
 
                 if (val === '__new__') {
-                    // اكتب رقم جديد
-                    phoneInput.style.display = '';
-                    phoneInput.value = '';
-                    phoneInput.focus();
-                    nameInput.value    = '';
+                    remoteJidInput.style.display = '';
+                    remoteJidInput.value = '';
+                    remoteJidInput.focus();
                     addressInput.value = '';
                 } else if (val === '') {
-                    // لم يتم الاختيار
-                    phoneInput.style.display = 'none';
-                    phoneInput.value = '';
-                    nameInput.value    = '';
+                    remoteJidInput.style.display = 'none';
+                    remoteJidInput.value = '';
                     addressInput.value = '';
                 } else {
-                    // عميل مسجل — ملّي البيانات تلقائي
                     const opt = this.options[this.selectedIndex];
-                    phoneInput.style.display = 'none';
-                    phoneInput.value   = val;
-                    nameInput.value    = opt.dataset.name    || '';
-                    addressInput.value = opt.dataset.address || '';
+                    remoteJidInput.style.display = 'none';
+                    remoteJidInput.value   = val;
+                    addressInput.value     = opt.dataset.address || '';
                 }
             });
         }

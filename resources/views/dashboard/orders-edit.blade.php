@@ -25,17 +25,11 @@
             @method('PUT')
 
             <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 14px;">
-                <div>
-                    <label style="display:block; margin-bottom:6px; font-weight:700;">اسم العميل</label>
-                    <input name="customer_name" type="text" value="{{ old('customer_name', $order->customer_name) }}" required style="width:100%; border:1px solid #d1d5db; border-radius:8px; padding:10px; font-family:inherit;">
-                </div>
-                <div>
-                    <label style="display:block; margin-bottom:6px; font-weight:700;">تليفون العميل</label>
-                    <input name="phone" type="text" value="{{ old('phone', $order->phone) }}" required style="width:100%; border:1px solid #d1d5db; border-radius:8px; padding:10px; font-family:inherit;">
-                </div>
                 <div style="grid-column: 1 / -1;">
-                    <label style="display:block; margin-bottom:6px; font-weight:700;">عنوان التوصيل</label>
-                    <textarea name="delivery_address" rows="2" required style="width:100%; border:1px solid #d1d5db; border-radius:8px; padding:10px; font-family:inherit; resize:vertical;">{{ old('delivery_address', $order->delivery_address) }}</textarea>
+                    <label style="display:block; margin-bottom:6px; font-weight:700;">remoteJid</label>
+                    <input name="remote_jid" type="text" value="{{ old('remote_jid', $order->remote_jid) }}"
+                           placeholder="مثال: 96550000000@s.whatsapp.net"
+                           style="width:100%; border:1px solid #d1d5db; border-radius:8px; padding:10px; font-family:monospace; font-size:14px; direction:ltr;">
                 </div>
                 <div>
                     <label style="display:block; margin-bottom:6px; font-weight:700;">حالة الطلب</label>
