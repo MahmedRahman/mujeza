@@ -128,7 +128,7 @@ class AuthController extends Controller
 
         $customers = $customersQuery->latest()->paginate(20)->withQueryString();
 
-        $autoReplyRaw = (string) (Setting::query()->where('key', 'whatsapp_auto_reply_global_enabled')->value('value') ?? '0');
+        $autoReplyRaw = (string) (Setting::query()->where('key', 'whatsapp_auto_reply_global_enabled')->value('value') ?? '1');
         $autoReplyEnabled = in_array(strtolower($autoReplyRaw), ['1', 'true', 'on', 'yes'], true);
 
         $overridesRaw = Setting::query()->where('key', 'whatsapp_auto_reply_chat_overrides')->value('value');
@@ -151,7 +151,7 @@ class AuthController extends Controller
 
     public function createCustomer(): View
     {
-        $autoReplyRaw     = (string) (Setting::query()->where('key', 'whatsapp_auto_reply_global_enabled')->value('value') ?? '0');
+        $autoReplyRaw     = (string) (Setting::query()->where('key', 'whatsapp_auto_reply_global_enabled')->value('value') ?? '1');
         $autoReplyEnabled = in_array(strtolower($autoReplyRaw), ['1', 'true', 'on', 'yes'], true);
 
         return view('dashboard.customers-create', [
@@ -179,7 +179,7 @@ class AuthController extends Controller
         // حفظ override للرد الآلي لو اختلف عن الإعداد العام
         if (isset($validated['auto_reply'])) {
             $newVal    = (bool) $validated['auto_reply'];
-            $globalRaw = (string) (Setting::query()->where('key', 'whatsapp_auto_reply_global_enabled')->value('value') ?? '0');
+            $globalRaw = (string) (Setting::query()->where('key', 'whatsapp_auto_reply_global_enabled')->value('value') ?? '1');
             $global    = in_array(strtolower($globalRaw), ['1', 'true', 'on', 'yes'], true);
 
             if ($newVal !== $global) {
@@ -205,7 +205,7 @@ class AuthController extends Controller
 
     public function editCustomer(Customer $customer): View
     {
-        $autoReplyRaw  = (string) (Setting::query()->where('key', 'whatsapp_auto_reply_global_enabled')->value('value') ?? '0');
+        $autoReplyRaw  = (string) (Setting::query()->where('key', 'whatsapp_auto_reply_global_enabled')->value('value') ?? '1');
         $globalEnabled = in_array(strtolower($autoReplyRaw), ['1', 'true', 'on', 'yes'], true);
 
         $overridesRaw  = Setting::query()->where('key', 'whatsapp_auto_reply_chat_overrides')->value('value');
@@ -2417,7 +2417,7 @@ class AuthController extends Controller
 
     private function loadAutoReplySettings(): array
     {
-        $globalRaw = (string) (Setting::query()->where('key', 'whatsapp_auto_reply_global_enabled')->value('value') ?? '0');
+        $globalRaw = (string) (Setting::query()->where('key', 'whatsapp_auto_reply_global_enabled')->value('value') ?? '1');
         $global    = in_array(strtolower($globalRaw), ['1', 'true', 'on', 'yes'], true);
 
         $overridesRaw = Setting::query()->where('key', 'whatsapp_auto_reply_chat_overrides')->value('value');
