@@ -121,6 +121,7 @@ class AuthController extends Controller
             $customersQuery->where(function ($builder) use ($q) {
                 $builder->where('name', 'like', '%'.$q.'%')
                     ->orWhere('phone', 'like', '%'.$q.'%')
+                    ->orWhere('remote_jid', 'like', '%'.$q.'%')
                     ->orWhere('address', 'like', '%'.$q.'%');
             });
         }
@@ -161,28 +162,28 @@ class AuthController extends Controller
     public function storeCustomer(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'phone'      => ['required', 'string', 'max:20', 'unique:customers,phone'],
-            'remote_jid' => ['nullable', 'string', 'max:255'],
+            'remote_jid' => ['required', 'string', 'max:255', 'unique:customers,remote_jid'],
+            'phone'      => ['nullable', 'string', 'max:50'],
             'name'       => ['required', 'string', 'max:255'],
             'address'    => ['nullable', 'string', 'max:1000'],
             'auto_reply' => ['nullable', 'in:0,1'],
         ]);
 
         Customer::query()->create([
-            'phone'      => $validated['phone'],
-            'remote_jid' => $validated['remote_jid'] ?? null,
+            'remote_jid' => $validated['remote_jid'],
+            'phone'      => $validated['phone'] ?? null,
             'name'       => $validated['name'],
             'address'    => $validated['address'] ?? null,
         ]);
 
         // حفظ override للرد الآلي لو اختلف عن الإعداد العام
         if (isset($validated['auto_reply'])) {
-            $newVal   = (bool) $validated['auto_reply'];
+            $newVal    = (bool) $validated['auto_reply'];
             $globalRaw = (string) (Setting::query()->where('key', 'whatsapp_auto_reply_global_enabled')->value('value') ?? '0');
-            $global   = in_array(strtolower($globalRaw), ['1', 'true', 'on', 'yes'], true);
+            $global    = in_array(strtolower($globalRaw), ['1', 'true', 'on', 'yes'], true);
 
             if ($newVal !== $global) {
-                $chatId       = $validated['phone'].'@s.whatsapp.net';
+                $chatId       = $validated['remote_jid'];
                 $overridesRaw = Setting::query()->where('key', 'whatsapp_auto_reply_chat_overrides')->value('value');
                 $overrides    = [];
                 if (is_string($overridesRaw) && trim($overridesRaw) !== '') {
@@ -207,7 +208,7 @@ class AuthController extends Controller
         $autoReplyRaw  = (string) (Setting::query()->where('key', 'whatsapp_auto_reply_global_enabled')->value('value') ?? '0');
         $globalEnabled = in_array(strtolower($autoReplyRaw), ['1', 'true', 'on', 'yes'], true);
 
-        $overridesRaw = Setting::query()->where('key', 'whatsapp_auto_reply_chat_overrides')->value('value');
+        $overridesRaw  = Setting::query()->where('key', 'whatsapp_auto_reply_chat_overrides')->value('value');
         $chatOverrides = [];
         if (is_string($overridesRaw) && trim($overridesRaw) !== '') {
             $decoded = json_decode($overridesRaw, true);
@@ -216,25 +217,26 @@ class AuthController extends Controller
             }
         }
 
-        $chatId      = $customer->phone.'@s.whatsapp.net';
+        // remote_jid IS the chat ID
+        $chatId      = $customer->remote_jid;
         $hasOverride = array_key_exists($chatId, $chatOverrides);
         $autoReply   = $hasOverride ? (bool) $chatOverrides[$chatId] : $globalEnabled;
 
         return view('dashboard.customers-edit', [
-            'customer'     => $customer,
-            'chatId'       => $chatId,
-            'autoReply'    => $autoReply,
-            'hasOverride'  => $hasOverride,
-            'globalEnabled'=> $globalEnabled,
+            'customer'      => $customer,
+            'chatId'        => $chatId,
+            'autoReply'     => $autoReply,
+            'hasOverride'   => $hasOverride,
+            'globalEnabled' => $globalEnabled,
         ]);
     }
 
     public function updateCustomer(Request $request, Customer $customer): RedirectResponse
     {
         $validated = $request->validate([
-            'remote_jid' => ['nullable', 'string', 'max:255'],
-            'name'       => ['required', 'string', 'max:255'],
-            'address'    => ['nullable', 'string', 'max:1000'],
+            'phone'   => ['nullable', 'string', 'max:50'],
+            'name'    => ['required', 'string', 'max:255'],
+            'address' => ['nullable', 'string', 'max:1000'],
         ]);
 
         $customer->update($validated);
@@ -1796,7 +1798,7 @@ class AuthController extends Controller
         operationId: 'checkAndSaveCustomer',
         tags: ['Customers'],
         summary: 'تحقق وسجّل تلقائياً بالـ remoteJid',
-        description: 'يبحث عن العميل بالـ remote_jid. إذا وُجد يُرجع بياناته (found: true). إذا لم يُوجد يُسجّله تلقائياً مستخدماً remote_jid كـ phone وكـ remote_jid معاً، ثم يُرجع بياناته (found: false, newly_created: true). مناسب لتسجيل العملاء عند أول رسالة واتساب.',
+        description: 'يبحث عن العميل بالـ remote_jid. إذا وُجد يُرجع بياناته (found: true). إذا لم يُوجد يُسجّله تلقائياً باستخدام remote_jid فقط كمعرّف أساسي (phone يُترك فارغاً لأنه غير معروف في أول رسالة)، ثم يُرجع بياناته (found: false, newly_created: true). مناسب لتسجيل العملاء تلقائياً عند أول رسالة واتساب.',
         parameters: [
             new OA\Parameter(
                 name: 'remote_jid',
@@ -1851,9 +1853,9 @@ class AuthController extends Controller
 
         if (! $customer) {
             $customer = Customer::query()->create([
-                'phone'      => $remoteJid,
                 'remote_jid' => $remoteJid,
-                'name'       => $name !== '' ? $name : '',
+                'phone'      => null,
+                'name'       => $name,
                 'address'    => null,
             ]);
             $newlyCreated = true;
@@ -1938,17 +1940,17 @@ class AuthController extends Controller
     }
 
     #[OA\Get(
-        path: '/api/customers/{phone}',
+        path: '/api/customers/{remote_jid}',
         operationId: 'showCustomer',
         tags: ['Customers'],
-        summary: 'Get a single customer by phone number',
+        summary: 'Get a single customer by remoteJid',
         parameters: [
             new OA\Parameter(
-                name: 'phone',
-                description: 'Customer phone number (primary key)',
+                name: 'remote_jid',
+                description: 'Customer remoteJid (primary key)',
                 in: 'path',
                 required: true,
-                schema: new OA\Schema(type: 'string', example: '01012345678')
+                schema: new OA\Schema(type: 'string', example: '96550000000@s.whatsapp.net')
             ),
         ],
         responses: [
@@ -1962,9 +1964,10 @@ class AuthController extends Controller
                             property: 'data',
                             type: 'object',
                             properties: [
-                                new OA\Property(property: 'phone', type: 'string', example: '01012345678'),
+                                new OA\Property(property: 'remote_jid', type: 'string', example: '96550000000@s.whatsapp.net'),
+                                new OA\Property(property: 'phone', type: 'string', nullable: true, example: '96550000000'),
                                 new OA\Property(property: 'name', type: 'string', example: 'محمد أحمد'),
-                                new OA\Property(property: 'address', type: 'string', example: 'القاهرة - مدينة نصر'),
+                                new OA\Property(property: 'address', type: 'string', nullable: true, example: 'القاهرة - مدينة نصر'),
                                 new OA\Property(property: 'auto_reply', type: 'boolean', example: true),
                                 new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
                                 new OA\Property(property: 'updated_at', type: 'string', format: 'date-time'),
@@ -1976,9 +1979,9 @@ class AuthController extends Controller
             new OA\Response(response: 404, description: 'Customer not found'),
         ]
     )]
-    public function apiShowCustomer(string $phone): JsonResponse
+    public function apiShowCustomer(string $remote_jid): JsonResponse
     {
-        $customer = Customer::query()->find($phone);
+        $customer = Customer::query()->find($remote_jid);
 
         if (! $customer) {
             return response()->json(['success' => false, 'message' => 'المستخدم غير موجود.'], 404);
@@ -1995,14 +1998,14 @@ class AuthController extends Controller
         operationId: 'storeCustomer',
         tags: ['Customers'],
         summary: 'Create a new customer',
-        description: 'The phone number is the primary key and cannot be changed after creation.',
+        description: 'remoteJid is the primary key and cannot be changed after creation. Phone is optional.',
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
-                required: ['phone', 'name'],
+                required: ['remote_jid', 'name'],
                 properties: [
-                    new OA\Property(property: 'phone', type: 'string', example: '01012345678'),
-                    new OA\Property(property: 'remote_jid', type: 'string', nullable: true, example: '96501012345@s.whatsapp.net'),
+                    new OA\Property(property: 'remote_jid', type: 'string', example: '96550000000@s.whatsapp.net'),
+                    new OA\Property(property: 'phone', type: 'string', nullable: true, example: '96550000000'),
                     new OA\Property(property: 'name', type: 'string', example: 'محمد أحمد'),
                     new OA\Property(property: 'address', type: 'string', example: 'القاهرة - مدينة نصر', nullable: true),
                 ]
@@ -2020,14 +2023,14 @@ class AuthController extends Controller
                     ]
                 )
             ),
-            new OA\Response(response: 422, description: 'Validation error — phone already exists or missing required fields'),
+            new OA\Response(response: 422, description: 'Validation error — remote_jid already exists or missing required fields'),
         ]
     )]
     public function apiStoreCustomer(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'phone'      => ['required', 'string', 'max:20', 'unique:customers,phone'],
-            'remote_jid' => ['nullable', 'string', 'max:255'],
+            'remote_jid' => ['required', 'string', 'max:255', 'unique:customers,remote_jid'],
+            'phone'      => ['nullable', 'string', 'max:50'],
             'name'       => ['required', 'string', 'max:255'],
             'address'    => ['nullable', 'string', 'max:1000'],
         ]);
@@ -2042,18 +2045,18 @@ class AuthController extends Controller
     }
 
     #[OA\Put(
-        path: '/api/customers/{phone}',
+        path: '/api/customers/{remote_jid}',
         operationId: 'updateCustomer',
         tags: ['Customers'],
         summary: 'Update customer data',
-        description: 'The phone number cannot be changed. Name, address, and remoteJid can be updated.',
+        description: 'remoteJid is fixed and cannot be changed. Phone, name, and address can be updated.',
         parameters: [
             new OA\Parameter(
-                name: 'phone',
-                description: 'Customer phone number (primary key)',
+                name: 'remote_jid',
+                description: 'Customer remoteJid (primary key)',
                 in: 'path',
                 required: true,
-                schema: new OA\Schema(type: 'string', example: '01012345678')
+                schema: new OA\Schema(type: 'string', example: '96550000000@s.whatsapp.net')
             ),
         ],
         requestBody: new OA\RequestBody(
@@ -2061,7 +2064,7 @@ class AuthController extends Controller
             content: new OA\JsonContent(
                 required: ['name'],
                 properties: [
-                    new OA\Property(property: 'remote_jid', type: 'string', nullable: true, example: '96501012345@s.whatsapp.net'),
+                    new OA\Property(property: 'phone', type: 'string', nullable: true, example: '96550000000'),
                     new OA\Property(property: 'name', type: 'string', example: 'محمد أحمد محدث'),
                     new OA\Property(property: 'address', type: 'string', example: 'الإسكندرية - سيدي بشر', nullable: true),
                 ]
@@ -2073,18 +2076,18 @@ class AuthController extends Controller
             new OA\Response(response: 422, description: 'Validation error'),
         ]
     )]
-    public function apiUpdateCustomer(Request $request, string $phone): JsonResponse
+    public function apiUpdateCustomer(Request $request, string $remote_jid): JsonResponse
     {
-        $customer = Customer::query()->find($phone);
+        $customer = Customer::query()->find($remote_jid);
 
         if (! $customer) {
             return response()->json(['success' => false, 'message' => 'المستخدم غير موجود.'], 404);
         }
 
         $validated = $request->validate([
-            'remote_jid' => ['nullable', 'string', 'max:255'],
-            'name'       => ['required', 'string', 'max:255'],
-            'address'    => ['nullable', 'string', 'max:1000'],
+            'phone'   => ['nullable', 'string', 'max:50'],
+            'name'    => ['required', 'string', 'max:255'],
+            'address' => ['nullable', 'string', 'max:1000'],
         ]);
 
         $customer->update($validated);
@@ -2097,17 +2100,17 @@ class AuthController extends Controller
     }
 
     #[OA\Delete(
-        path: '/api/customers/{phone}',
+        path: '/api/customers/{remote_jid}',
         operationId: 'deleteCustomer',
         tags: ['Customers'],
         summary: 'Delete a customer',
         parameters: [
             new OA\Parameter(
-                name: 'phone',
-                description: 'Customer phone number (primary key)',
+                name: 'remote_jid',
+                description: 'Customer remoteJid (primary key)',
                 in: 'path',
                 required: true,
-                schema: new OA\Schema(type: 'string', example: '01012345678')
+                schema: new OA\Schema(type: 'string', example: '96550000000@s.whatsapp.net')
             ),
         ],
         responses: [
@@ -2115,9 +2118,9 @@ class AuthController extends Controller
             new OA\Response(response: 404, description: 'Customer not found'),
         ]
     )]
-    public function apiDestroyCustomer(string $phone): JsonResponse
+    public function apiDestroyCustomer(string $remote_jid): JsonResponse
     {
-        $customer = Customer::query()->find($phone);
+        $customer = Customer::query()->find($remote_jid);
 
         if (! $customer) {
             return response()->json(['success' => false, 'message' => 'المستخدم غير موجود.'], 404);
@@ -2433,20 +2436,21 @@ class AuthController extends Controller
     {
         $global    = $autoReply['global'] ?? false;
         $overrides = $autoReply['overrides'] ?? [];
-        $chatId    = $customer->phone.'@s.whatsapp.net';
+        // remote_jid IS the chat identifier
+        $chatId           = $customer->remote_jid;
         $autoReplyEnabled = array_key_exists($chatId, $overrides)
             ? (bool) $overrides[$chatId]
             : $global;
 
-            return [
-                'phone'       => $customer->phone,
-                'remote_jid'  => $customer->remote_jid,
-                'name'        => $customer->name,
-                'address'     => $customer->address,
-                'auto_reply'  => $autoReplyEnabled,
-                'created_at'  => optional($customer->created_at)?->toISOString(),
-                'updated_at'  => optional($customer->updated_at)?->toISOString(),
-            ];
+        return [
+            'remote_jid'  => $customer->remote_jid,
+            'phone'       => $customer->phone,
+            'name'        => $customer->name,
+            'address'     => $customer->address,
+            'auto_reply'  => $autoReplyEnabled,
+            'created_at'  => optional($customer->created_at)?->toISOString(),
+            'updated_at'  => optional($customer->updated_at)?->toISOString(),
+        ];
     }
 
     private function transformComplaintForApi(Complaint $complaint): array

@@ -6,13 +6,13 @@ use Illuminate\Database\Eloquent\Model;
 
 class Customer extends Model
 {
-    protected $primaryKey = 'phone';
+    protected $primaryKey = 'remote_jid';
     public $incrementing = false;
     protected $keyType = 'string';
 
     protected $fillable = [
-        'phone',
         'remote_jid',
+        'phone',
         'name',
         'address',
     ];

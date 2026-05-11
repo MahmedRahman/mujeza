@@ -818,7 +818,7 @@
                     "Customers"
                 ],
                 "summary": "تحقق وسجّل تلقائياً بالـ remoteJid",
-                "description": "يبحث عن العميل بالـ remote_jid. إذا وُجد يُرجع بياناته (found: true). إذا لم يُوجد يُسجّله تلقائياً مستخدماً remote_jid كـ phone وكـ remote_jid معاً، ثم يُرجع بياناته (found: false, newly_created: true). مناسب لتسجيل العملاء عند أول رسالة واتساب.",
+                "description": "يبحث عن العميل بالـ remote_jid. إذا وُجد يُرجع بياناته (found: true). إذا لم يُوجد يُسجّله تلقائياً باستخدام remote_jid فقط كمعرّف أساسي (phone يُترك فارغاً لأنه غير معروف في أول رسالة)، ثم يُرجع بياناته (found: false, newly_created: true). مناسب لتسجيل العملاء تلقائياً عند أول رسالة واتساب.",
                 "operationId": "checkAndSaveCustomer",
                 "parameters": [
                     {
@@ -985,7 +985,7 @@
                     "Customers"
                 ],
                 "summary": "Create a new customer",
-                "description": "The phone number is the primary key and cannot be changed after creation.",
+                "description": "remoteJid is the primary key and cannot be changed after creation. Phone is optional.",
                 "operationId": "storeCustomer",
                 "requestBody": {
                     "required": true,
@@ -993,17 +993,17 @@
                         "application/json": {
                             "schema": {
                                 "required": [
-                                    "phone",
+                                    "remote_jid",
                                     "name"
                                 ],
                                 "properties": {
-                                    "phone": {
-                                        "type": "string",
-                                        "example": "01012345678"
-                                    },
                                     "remote_jid": {
                                         "type": "string",
-                                        "example": "96501012345@s.whatsapp.net",
+                                        "example": "96550000000@s.whatsapp.net"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "96550000000",
                                         "nullable": true
                                     },
                                     "name": {
@@ -1046,27 +1046,27 @@
                         }
                     },
                     "422": {
-                        "description": "Validation error — phone already exists or missing required fields"
+                        "description": "Validation error — remote_jid already exists or missing required fields"
                     }
                 }
             }
         },
-        "/api/customers/{phone}": {
+        "/api/customers/{remote_jid}": {
             "get": {
                 "tags": [
                     "Customers"
                 ],
-                "summary": "Get a single customer by phone number",
+                "summary": "Get a single customer by remoteJid",
                 "operationId": "showCustomer",
                 "parameters": [
                     {
-                        "name": "phone",
+                        "name": "remote_jid",
                         "in": "path",
-                        "description": "Customer phone number (primary key)",
+                        "description": "Customer remoteJid (primary key)",
                         "required": true,
                         "schema": {
                             "type": "string",
-                            "example": "01012345678"
+                            "example": "96550000000@s.whatsapp.net"
                         }
                     }
                 ],
@@ -1083,9 +1083,14 @@
                                         },
                                         "data": {
                                             "properties": {
+                                                "remote_jid": {
+                                                    "type": "string",
+                                                    "example": "96550000000@s.whatsapp.net"
+                                                },
                                                 "phone": {
                                                     "type": "string",
-                                                    "example": "01012345678"
+                                                    "example": "96550000000",
+                                                    "nullable": true
                                                 },
                                                 "name": {
                                                     "type": "string",
@@ -1093,7 +1098,8 @@
                                                 },
                                                 "address": {
                                                     "type": "string",
-                                                    "example": "القاهرة - مدينة نصر"
+                                                    "example": "القاهرة - مدينة نصر",
+                                                    "nullable": true
                                                 },
                                                 "auto_reply": {
                                                     "type": "boolean",
@@ -1126,17 +1132,17 @@
                     "Customers"
                 ],
                 "summary": "Update customer data",
-                "description": "The phone number cannot be changed. Name, address, and remoteJid can be updated.",
+                "description": "remoteJid is fixed and cannot be changed. Phone, name, and address can be updated.",
                 "operationId": "updateCustomer",
                 "parameters": [
                     {
-                        "name": "phone",
+                        "name": "remote_jid",
                         "in": "path",
-                        "description": "Customer phone number (primary key)",
+                        "description": "Customer remoteJid (primary key)",
                         "required": true,
                         "schema": {
                             "type": "string",
-                            "example": "01012345678"
+                            "example": "96550000000@s.whatsapp.net"
                         }
                     }
                 ],
@@ -1149,9 +1155,9 @@
                                     "name"
                                 ],
                                 "properties": {
-                                    "remote_jid": {
+                                    "phone": {
                                         "type": "string",
-                                        "example": "96501012345@s.whatsapp.net",
+                                        "example": "96550000000",
                                         "nullable": true
                                     },
                                     "name": {
@@ -1189,13 +1195,13 @@
                 "operationId": "deleteCustomer",
                 "parameters": [
                     {
-                        "name": "phone",
+                        "name": "remote_jid",
                         "in": "path",
-                        "description": "Customer phone number (primary key)",
+                        "description": "Customer remoteJid (primary key)",
                         "required": true,
                         "schema": {
                             "type": "string",
-                            "example": "01012345678"
+                            "example": "96550000000@s.whatsapp.net"
                         }
                     }
                 ],

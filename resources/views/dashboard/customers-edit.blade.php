@@ -50,31 +50,34 @@
             </div>
         </div>
 
-        <form method="POST" action="{{ route('customers.update', $customer->phone) }}">
+        <form method="POST" action="{{ route('customers.update', $customer->remote_jid) }}">
             @csrf
             @method('PUT')
 
             <div style="margin-bottom: 16px;">
                 <label style="display:block; font-weight: 700; margin-bottom: 6px;">
-                    الرقم
-                    <span style="font-weight:400; font-size:12px; color:#6b7280;">(معرّف ثابت - لا يمكن تغييره)</span>
+                    remoteJid
+                    <span style="font-weight:400; font-size:12px; color:#6b7280;">(معرّف ثابت — لا يمكن تغييره)</span>
                 </label>
                 <input
                     type="text"
-                    value="{{ $customer->phone }}"
+                    value="{{ $customer->remote_jid }}"
                     disabled
-                    style="width:100%; box-sizing:border-box; border:1px solid #e5e7eb; border-radius:8px; padding:10px 12px; font-family:monospace; font-size:15px; background:#f9fafb; color:#6b7280; direction:ltr;"
+                    style="width:100%; box-sizing:border-box; border:1px solid #e5e7eb; border-radius:8px; padding:10px 12px; font-family:monospace; font-size:14px; background:#f9fafb; color:#6b7280; direction:ltr;"
                 >
             </div>
 
             <div style="margin-bottom: 16px;">
-                <label style="display:block; font-weight: 700; margin-bottom: 6px;">remoteJid</label>
+                <label style="display:block; font-weight: 700; margin-bottom: 6px;">
+                    رقم التليفون
+                    <span style="font-weight:400; font-size:12px; color:#6b7280;">(قابل للتعديل)</span>
+                </label>
                 <input
                     type="text"
-                    name="remote_jid"
-                    value="{{ old('remote_jid', $customer->remote_jid) }}"
-                    placeholder="مثال: 96550000000@s.whatsapp.net"
-                    style="width:100%; box-sizing:border-box; border:1px solid #d1d5db; border-radius:8px; padding:10px 12px; font-family:monospace; font-size:14px; direction:ltr;"
+                    name="phone"
+                    value="{{ old('phone', $customer->phone) }}"
+                    placeholder="مثال: 96550000000"
+                    style="width:100%; box-sizing:border-box; border:1px solid #d1d5db; border-radius:8px; padding:10px 12px; font-family:inherit; font-size:15px; direction:ltr;"
                 >
             </div>
 

@@ -88,7 +88,7 @@
                     <tbody>
                         @foreach ($customers as $customer)
                             @php
-                                $chatId  = $customer->phone . '@s.whatsapp.net';
+                                $chatId  = $customer->remote_jid;
                                 $hasOverride = array_key_exists($chatId, $chatOverrides);
                                 $customerAutoReply = $hasOverride ? (bool) $chatOverrides[$chatId] : $autoReplyEnabled;
                             @endphp
@@ -98,10 +98,10 @@
                                 </td>
                                 <td style="padding: 10px; border: 1px solid #efe3b7; font-weight: 600;">{{ $customer->name }}</td>
                                 <td style="padding: 10px; border: 1px solid #efe3b7; font-weight: 700; direction: ltr; text-align: right;">
-                                    <span style="background:#f1f5f9; border-radius:6px; padding:3px 8px; font-family:monospace;">{{ $customer->phone }}</span>
+                                    <span style="background:#f1f5f9; border-radius:6px; padding:3px 8px; font-family:monospace;">{{ $customer->phone ?? '—' }}</span>
                                 </td>
                                 <td style="padding: 10px; border: 1px solid #efe3b7; color:#4b5563; font-size:13px; direction:ltr; text-align:right;">
-                                    <span style="font-family:monospace;">{{ $customer->remote_jid ?? '—' }}</span>
+                                    <span style="font-family:monospace;">{{ $customer->remote_jid }}</span>
                                 </td>
                                 <td style="padding: 10px; border: 1px solid #efe3b7; color: #4b5563;">{{ $customer->address ?? '—' }}</td>
 
@@ -129,11 +129,11 @@
 
                                 <td style="padding: 10px; border: 1px solid #efe3b7;">
                                     <div style="display:flex; gap:8px; align-items:center;">
-                                        <a href="{{ route('customers.edit', $customer->phone) }}"
+                                        <a href="{{ route('customers.edit', $customer->remote_jid) }}"
                                            style="text-decoration:none; background:#f8f2de; color:#92400e; border:1px solid #d4af37; padding:6px 12px; border-radius:6px; font-weight:700; font-size:13px;">
                                             تعديل
                                         </a>
-                                        <form method="POST" action="{{ route('customers.destroy', $customer->phone) }}"
+                                        <form method="POST" action="{{ route('customers.destroy', $customer->remote_jid) }}"
                                               onsubmit="return confirm('هل أنت متأكد من حذف هذا المستخدم؟')">
                                             @csrf
                                             @method('DELETE')
