@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Route;
 Route::get('/customers', [AuthController::class, 'apiCustomers'])->name('api.customers.index');
 Route::post('/customers', [AuthController::class, 'apiStoreCustomer'])->name('api.customers.store');
 Route::get('/customers/check', [AuthController::class, 'apiCheckCustomer'])->name('api.customers.check');
+Route::get('/customers/check-and-save', [AuthController::class, 'apiCheckAndSaveCustomer'])->name('api.customers.check-and-save');
 Route::get('/customers/{phone}', [AuthController::class, 'apiShowCustomer'])->name('api.customers.show');
 Route::match(['put', 'patch'], '/customers/{phone}', [AuthController::class, 'apiUpdateCustomer'])->name('api.customers.update');
 Route::delete('/customers/{phone}', [AuthController::class, 'apiDestroyCustomer'])->name('api.customers.destroy');

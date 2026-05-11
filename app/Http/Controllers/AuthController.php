@@ -1792,6 +1792,83 @@ class AuthController extends Controller
     }
 
     #[OA\Get(
+        path: '/api/customers/check-and-save',
+        operationId: 'checkAndSaveCustomer',
+        tags: ['Customers'],
+        summary: 'تحقق وسجّل تلقائياً بالـ remoteJid',
+        description: 'يبحث عن العميل بالـ remote_jid. إذا وُجد يُرجع بياناته (found: true). إذا لم يُوجد يُسجّله تلقائياً مستخدماً remote_jid كـ phone وكـ remote_jid معاً، ثم يُرجع بياناته (found: false, newly_created: true). مناسب لتسجيل العملاء عند أول رسالة واتساب.',
+        parameters: [
+            new OA\Parameter(
+                name: 'remote_jid',
+                description: 'معرّف واتساب للعميل (remoteJid)',
+                in: 'query',
+                required: true,
+                schema: new OA\Schema(type: 'string', example: '96550000000@s.whatsapp.net')
+            ),
+            new OA\Parameter(
+                name: 'name',
+                description: 'اسم العميل (اختياري — يُستخدم فقط عند الإنشاء)',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'string', example: 'محمد أحمد')
+            ),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'نتيجة التحقق والحفظ',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'found', type: 'boolean', example: false, description: 'true لو كان موجوداً مسبقاً، false لو تم إنشاؤه الآن'),
+                        new OA\Property(property: 'newly_created', type: 'boolean', example: true),
+                        new OA\Property(property: 'phone', type: 'string', example: '96550000000@s.whatsapp.net'),
+                        new OA\Property(property: 'remote_jid', type: 'string', example: '96550000000@s.whatsapp.net'),
+                        new OA\Property(property: 'name', type: 'string', example: ''),
+                        new OA\Property(property: 'address', type: 'string', nullable: true),
+                        new OA\Property(property: 'auto_reply', type: 'boolean', example: true),
+                        new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
+                        new OA\Property(property: 'updated_at', type: 'string', format: 'date-time'),
+                    ]
+                )
+            ),
+            new OA\Response(response: 422, description: 'حقل remote_jid مطلوب'),
+        ]
+    )]
+    public function apiCheckAndSaveCustomer(Request $request): JsonResponse
+    {
+        $request->validate([
+            'remote_jid' => ['required', 'string', 'max:255'],
+            'name'       => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $remoteJid = trim((string) $request->query('remote_jid'));
+        $name      = trim((string) ($request->query('name') ?? ''));
+
+        $customer = Customer::query()->where('remote_jid', $remoteJid)->first();
+
+        $autoReply    = $this->loadAutoReplySettings();
+        $newlyCreated = false;
+
+        if (! $customer) {
+            $customer = Customer::query()->create([
+                'phone'      => $remoteJid,
+                'remote_jid' => $remoteJid,
+                'name'       => $name !== '' ? $name : '',
+                'address'    => null,
+            ]);
+            $newlyCreated = true;
+        }
+
+        return response()->json(array_merge(
+            [
+                'found'         => ! $newlyCreated,
+                'newly_created' => $newlyCreated,
+            ],
+            $this->transformCustomerForApi($customer, $autoReply)
+        ));
+    }
+
+    #[OA\Get(
         path: '/api/customers',
         operationId: 'getCustomers',
         tags: ['Customers'],

@@ -812,6 +812,92 @@
                 }
             }
         },
+        "/api/customers/check-and-save": {
+            "get": {
+                "tags": [
+                    "Customers"
+                ],
+                "summary": "تحقق وسجّل تلقائياً بالـ remoteJid",
+                "description": "يبحث عن العميل بالـ remote_jid. إذا وُجد يُرجع بياناته (found: true). إذا لم يُوجد يُسجّله تلقائياً مستخدماً remote_jid كـ phone وكـ remote_jid معاً، ثم يُرجع بياناته (found: false, newly_created: true). مناسب لتسجيل العملاء عند أول رسالة واتساب.",
+                "operationId": "checkAndSaveCustomer",
+                "parameters": [
+                    {
+                        "name": "remote_jid",
+                        "in": "query",
+                        "description": "معرّف واتساب للعميل (remoteJid)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "96550000000@s.whatsapp.net"
+                        }
+                    },
+                    {
+                        "name": "name",
+                        "in": "query",
+                        "description": "اسم العميل (اختياري — يُستخدم فقط عند الإنشاء)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "محمد أحمد"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "نتيجة التحقق والحفظ",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "found": {
+                                            "description": "true لو كان موجوداً مسبقاً، false لو تم إنشاؤه الآن",
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "newly_created": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "phone": {
+                                            "type": "string",
+                                            "example": "96550000000@s.whatsapp.net"
+                                        },
+                                        "remote_jid": {
+                                            "type": "string",
+                                            "example": "96550000000@s.whatsapp.net"
+                                        },
+                                        "name": {
+                                            "type": "string",
+                                            "example": ""
+                                        },
+                                        "address": {
+                                            "type": "string",
+                                            "nullable": true
+                                        },
+                                        "auto_reply": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "created_at": {
+                                            "type": "string",
+                                            "format": "date-time"
+                                        },
+                                        "updated_at": {
+                                            "type": "string",
+                                            "format": "date-time"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "حقل remote_jid مطلوب"
+                    }
+                }
+            }
+        },
         "/api/customers": {
             "get": {
                 "tags": [
