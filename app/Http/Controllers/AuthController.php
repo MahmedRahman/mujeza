@@ -803,18 +803,52 @@ class AuthController extends Controller
     {
         return view('dashboard.complaints-edit', [
             'complaint' => $complaint,
+            'statuses'  => \App\Models\Complaint::STATUSES,
         ]);
     }
 
     public function updateComplaint(Request $request, Complaint $complaint): RedirectResponse
     {
         $validated = $request->validate([
-            'remote_jid'  => ['nullable', 'string', 'max:255'],
-            'title'       => ['required', 'string', 'max:255'],
-            'description' => ['required', 'string', 'max:3000'],
+            'remote_jid'      => ['nullable', 'string', 'max:255'],
+            'title'           => ['required', 'string', 'max:255'],
+            'description'     => ['required', 'string', 'max:3000'],
+            'status'          => ['required', 'string', 'in:' . implode(',', \App\Models\Complaint::STATUSES)],
+            'notify_customer' => ['nullable', 'boolean'],
         ]);
 
-        $complaint->update($validated);
+        $oldStatus = $complaint->status;
+        $newStatus = $validated['status'];
+
+        $complaint->update([
+            'remote_jid'  => $validated['remote_jid'] ?? null,
+            'title'       => $validated['title'],
+            'description' => $validated['description'],
+            'status'      => $newStatus,
+        ]);
+
+        $shouldNotify = (bool) ($validated['notify_customer'] ?? false);
+        $remoteJid    = trim((string) ($validated['remote_jid'] ?? $complaint->remote_jid ?? ''));
+
+        if ($shouldNotify && $remoteJid !== '') {
+            $customer     = \App\Models\Customer::query()->where('remote_jid', $remoteJid)->first();
+            $customerName = $customer?->name ?? 'عزيزي العميل';
+
+            $statusEmoji = match ($newStatus) {
+                'جديدة'         => '🆕',
+                'قيد المعالجة'  => '🔄',
+                'تم الحل'       => '✅',
+                'مغلقة'         => '🔒',
+                default         => '📋',
+            };
+
+            $message = "مرحباً {$customerName} 👋\n\n"
+                . "بخصوص شكواك: *{$complaint->title}*\n\n"
+                . "{$statusEmoji} تم تحديث الحالة إلى: *{$newStatus}*\n\n"
+                . "شكراً لتواصلكم معنا 🌿";
+
+            $this->sendWhatsAppText($remoteJid, $message);
+        }
 
         return redirect()
             ->route('complaints.index')

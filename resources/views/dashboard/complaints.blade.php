@@ -47,6 +47,7 @@
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align: right;">الاسم</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align: right;">التليفون</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align: right;">العنوان</th>
+                            <th style="padding: 10px; border: 1px solid #efe3b7; text-align: center;">الحالة</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align: right;">الوصف</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align: center;">الإجراءات</th>
                         </tr>
@@ -82,6 +83,27 @@
                                 </td>
                                 <td style="padding: 10px; border: 1px solid #efe3b7; font-weight:700;">
                                     {{ $complaint->title }}
+                                </td>
+                                <td style="padding: 10px; border: 1px solid #efe3b7; text-align:center; white-space:nowrap;">
+                                    @php
+                                        $statusStyle = match($complaint->status ?? 'جديدة') {
+                                            'جديدة'        => 'background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe;',
+                                            'قيد المعالجة' => 'background:#fffbeb; color:#92400e; border:1px solid #fcd34d;',
+                                            'تم الحل'      => 'background:#f0fdf4; color:#15803d; border:1px solid #bbf7d0;',
+                                            'مغلقة'        => 'background:#f3f4f6; color:#6b7280; border:1px solid #d1d5db;',
+                                            default        => 'background:#f3f4f6; color:#374151; border:1px solid #e5e7eb;',
+                                        };
+                                        $statusEmoji = match($complaint->status ?? 'جديدة') {
+                                            'جديدة'        => '🆕',
+                                            'قيد المعالجة' => '🔄',
+                                            'تم الحل'      => '✅',
+                                            'مغلقة'        => '🔒',
+                                            default        => '📋',
+                                        };
+                                    @endphp
+                                    <span style="display:inline-block; padding:4px 10px; border-radius:20px; font-size:12px; font-weight:800; {{ $statusStyle }}">
+                                        {{ $statusEmoji }} {{ $complaint->status ?? 'جديدة' }}
+                                    </span>
                                 </td>
                                 <td style="padding: 10px; border: 1px solid #efe3b7; color:#374151; max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                                     {{ \Illuminate\Support\Str::limit($complaint->description, 160) }}
