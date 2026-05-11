@@ -715,18 +715,28 @@
                 "tags": [
                     "Customers"
                 ],
-                "summary": "التحقق من تسجيل رقم هاتف",
-                "description": "يتحقق إذا كان الرقم مسجلاً. إذا كان مسجلاً تُرجع بياناته مسطّحة في نفس مستوى registered، وإلا يُرجع registered: false.",
+                "summary": "التحقق من تسجيل عميل بالهاتف أو remoteJid",
+                "description": "يتحقق إذا كان العميل مسجلاً بـ phone أو remote_jid. يجب إرسال أحدهما على الأقل. إذا كان مسجلاً تُرجع بياناته مسطّحة، وإلا يُرجع registered: false.",
                 "operationId": "checkCustomer",
                 "parameters": [
                     {
                         "name": "phone",
                         "in": "query",
-                        "description": "رقم الهاتف المراد التحقق منه",
-                        "required": true,
+                        "description": "رقم الهاتف (أو أرسل remote_jid)",
+                        "required": false,
                         "schema": {
                             "type": "string",
                             "example": "01012345678"
+                        }
+                    },
+                    {
+                        "name": "remote_jid",
+                        "in": "query",
+                        "description": "remoteJid (أو أرسل phone)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "96501012345@s.whatsapp.net"
                         }
                     }
                 ],
@@ -747,6 +757,11 @@
                                                 "phone": {
                                                     "type": "string",
                                                     "example": "01012345678"
+                                                },
+                                                "remote_jid": {
+                                                    "type": "string",
+                                                    "example": "96501012345@s.whatsapp.net",
+                                                    "nullable": true
                                                 },
                                                 "name": {
                                                     "type": "string",
@@ -792,7 +807,7 @@
                         }
                     },
                     "422": {
-                        "description": "حقل phone مطلوب"
+                        "description": "يجب إرسال phone أو remote_jid"
                     }
                 }
             }
@@ -803,13 +818,13 @@
                     "Customers"
                 ],
                 "summary": "Get customers list",
-                "description": "Returns all customers. Supports optional search by name, phone, or address.",
+                "description": "Returns all customers. Supports optional search by name, phone, address, or remoteJid.",
                 "operationId": "getCustomers",
                 "parameters": [
                     {
                         "name": "q",
                         "in": "query",
-                        "description": "Search query (optional) — searches name, phone, address",
+                        "description": "Search query (optional) — searches name, phone, address, remote_jid",
                         "required": false,
                         "schema": {
                             "type": "string",
@@ -839,6 +854,11 @@
                                                     "phone": {
                                                         "type": "string",
                                                         "example": "01012345678"
+                                                    },
+                                                    "remote_jid": {
+                                                        "type": "string",
+                                                        "example": "96501012345@s.whatsapp.net",
+                                                        "nullable": true
                                                     },
                                                     "name": {
                                                         "type": "string",
@@ -894,6 +914,11 @@
                                     "phone": {
                                         "type": "string",
                                         "example": "01012345678"
+                                    },
+                                    "remote_jid": {
+                                        "type": "string",
+                                        "example": "96501012345@s.whatsapp.net",
+                                        "nullable": true
                                     },
                                     "name": {
                                         "type": "string",
@@ -1014,8 +1039,8 @@
                 "tags": [
                     "Customers"
                 ],
-                "summary": "Update customer name or address",
-                "description": "The phone number cannot be changed. Only name and address can be updated.",
+                "summary": "Update customer data",
+                "description": "The phone number cannot be changed. Name, address, and remoteJid can be updated.",
                 "operationId": "updateCustomer",
                 "parameters": [
                     {
@@ -1038,6 +1063,11 @@
                                     "name"
                                 ],
                                 "properties": {
+                                    "remote_jid": {
+                                        "type": "string",
+                                        "example": "96501012345@s.whatsapp.net",
+                                        "nullable": true
+                                    },
                                     "name": {
                                         "type": "string",
                                         "example": "محمد أحمد محدث"

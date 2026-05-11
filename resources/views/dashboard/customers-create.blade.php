@@ -37,6 +37,17 @@
             </div>
 
             <div style="margin-bottom: 16px;">
+                <label style="display:block; font-weight: 700; margin-bottom: 6px;">remoteJid</label>
+                <input
+                    type="text"
+                    name="remote_jid"
+                    value="{{ old('remote_jid') }}"
+                    placeholder="مثال: 96550000000@s.whatsapp.net"
+                    style="width:100%; box-sizing:border-box; border:1px solid #d1d5db; border-radius:8px; padding:10px 12px; font-family:monospace; font-size:14px; direction:ltr;"
+                >
+            </div>
+
+            <div style="margin-bottom: 16px;">
                 <label style="display:block; font-weight: 700; margin-bottom: 6px;">
                     الاسم <span style="color:#b91c1c;">*</span>
                 </label>

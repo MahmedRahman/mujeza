@@ -162,15 +162,17 @@ class AuthController extends Controller
     {
         $validated = $request->validate([
             'phone'      => ['required', 'string', 'max:20', 'unique:customers,phone'],
+            'remote_jid' => ['nullable', 'string', 'max:255'],
             'name'       => ['required', 'string', 'max:255'],
             'address'    => ['nullable', 'string', 'max:1000'],
             'auto_reply' => ['nullable', 'in:0,1'],
         ]);
 
         Customer::query()->create([
-            'phone'   => $validated['phone'],
-            'name'    => $validated['name'],
-            'address' => $validated['address'] ?? null,
+            'phone'      => $validated['phone'],
+            'remote_jid' => $validated['remote_jid'] ?? null,
+            'name'       => $validated['name'],
+            'address'    => $validated['address'] ?? null,
         ]);
 
         // حفظ override للرد الآلي لو اختلف عن الإعداد العام
@@ -230,8 +232,9 @@ class AuthController extends Controller
     public function updateCustomer(Request $request, Customer $customer): RedirectResponse
     {
         $validated = $request->validate([
-            'name'    => ['required', 'string', 'max:255'],
-            'address' => ['nullable', 'string', 'max:1000'],
+            'remote_jid' => ['nullable', 'string', 'max:255'],
+            'name'       => ['required', 'string', 'max:255'],
+            'address'    => ['nullable', 'string', 'max:1000'],
         ]);
 
         $customer->update($validated);
@@ -1696,15 +1699,22 @@ class AuthController extends Controller
         path: '/api/customers/check',
         operationId: 'checkCustomer',
         tags: ['Customers'],
-        summary: 'التحقق من تسجيل رقم هاتف',
-        description: 'يتحقق إذا كان الرقم مسجلاً. إذا كان مسجلاً تُرجع بياناته مسطّحة في نفس مستوى registered، وإلا يُرجع registered: false.',
+        summary: 'التحقق من تسجيل عميل بالهاتف أو remoteJid',
+        description: 'يتحقق إذا كان العميل مسجلاً بـ phone أو remote_jid. يجب إرسال أحدهما على الأقل. إذا كان مسجلاً تُرجع بياناته مسطّحة، وإلا يُرجع registered: false.',
         parameters: [
             new OA\Parameter(
                 name: 'phone',
-                description: 'رقم الهاتف المراد التحقق منه',
+                description: 'رقم الهاتف (أو أرسل remote_jid)',
                 in: 'query',
-                required: true,
+                required: false,
                 schema: new OA\Schema(type: 'string', example: '01012345678')
+            ),
+            new OA\Parameter(
+                name: 'remote_jid',
+                description: 'remoteJid (أو أرسل phone)',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'string', example: '96501012345@s.whatsapp.net')
             ),
         ],
         responses: [
@@ -1718,6 +1728,7 @@ class AuthController extends Controller
                             properties: [
                                 new OA\Property(property: 'registered', type: 'boolean', example: true),
                                 new OA\Property(property: 'phone', type: 'string', example: '01012345678'),
+                                new OA\Property(property: 'remote_jid', type: 'string', nullable: true, example: '96501012345@s.whatsapp.net'),
                                 new OA\Property(property: 'name', type: 'string', example: 'محمد أحمد'),
                                 new OA\Property(property: 'address', type: 'string', example: 'القاهرة - مدينة نصر', nullable: true),
                                 new OA\Property(property: 'auto_reply', type: 'boolean', example: true),
@@ -1735,17 +1746,35 @@ class AuthController extends Controller
                     ]
                 )
             ),
-            new OA\Response(response: 422, description: 'حقل phone مطلوب'),
+            new OA\Response(response: 422, description: 'يجب إرسال phone أو remote_jid'),
         ]
     )]
     public function apiCheckCustomer(Request $request): JsonResponse
     {
         $request->validate([
-            'phone' => ['required', 'string'],
+            'phone'      => ['nullable', 'string'],
+            'remote_jid' => ['nullable', 'string'],
         ]);
 
-        $phone    = trim((string) $request->query('phone'));
-        $customer = Customer::query()->find($phone);
+        $phone     = trim((string) ($request->query('phone') ?? ''));
+        $remoteJid = trim((string) ($request->query('remote_jid') ?? ''));
+
+        if ($phone === '' && $remoteJid === '') {
+            return response()->json([
+                'success' => false,
+                'message' => 'يجب إرسال phone أو remote_jid.',
+            ], 422);
+        }
+
+        $customer = null;
+
+        if ($phone !== '') {
+            $customer = Customer::query()->find($phone);
+        }
+
+        if (! $customer && $remoteJid !== '') {
+            $customer = Customer::query()->where('remote_jid', $remoteJid)->first();
+        }
 
         if ($customer) {
             $autoReply = $this->loadAutoReplySettings();
@@ -1767,11 +1796,11 @@ class AuthController extends Controller
         operationId: 'getCustomers',
         tags: ['Customers'],
         summary: 'Get customers list',
-        description: 'Returns all customers. Supports optional search by name, phone, or address.',
+        description: 'Returns all customers. Supports optional search by name, phone, address, or remoteJid.',
         parameters: [
             new OA\Parameter(
                 name: 'q',
-                description: 'Search query (optional) — searches name, phone, address',
+                description: 'Search query (optional) — searches name, phone, address, remote_jid',
                 in: 'query',
                 required: false,
                 schema: new OA\Schema(type: 'string', example: 'محمد')
@@ -1791,6 +1820,7 @@ class AuthController extends Controller
                             items: new OA\Items(
                                 properties: [
                                     new OA\Property(property: 'phone', type: 'string', example: '01012345678'),
+                                    new OA\Property(property: 'remote_jid', type: 'string', nullable: true, example: '96501012345@s.whatsapp.net'),
                                     new OA\Property(property: 'name', type: 'string', example: 'محمد أحمد'),
                                     new OA\Property(property: 'address', type: 'string', example: 'القاهرة - مدينة نصر'),
                                     new OA\Property(property: 'auto_reply', type: 'boolean', example: true),
@@ -1813,7 +1843,8 @@ class AuthController extends Controller
             $customersQuery->where(function ($builder) use ($query) {
                 $builder->where('name', 'like', '%'.$query.'%')
                     ->orWhere('phone', 'like', '%'.$query.'%')
-                    ->orWhere('address', 'like', '%'.$query.'%');
+                    ->orWhere('address', 'like', '%'.$query.'%')
+                    ->orWhere('remote_jid', 'like', '%'.$query.'%');
             });
         }
 
@@ -1894,6 +1925,7 @@ class AuthController extends Controller
                 required: ['phone', 'name'],
                 properties: [
                     new OA\Property(property: 'phone', type: 'string', example: '01012345678'),
+                    new OA\Property(property: 'remote_jid', type: 'string', nullable: true, example: '96501012345@s.whatsapp.net'),
                     new OA\Property(property: 'name', type: 'string', example: 'محمد أحمد'),
                     new OA\Property(property: 'address', type: 'string', example: 'القاهرة - مدينة نصر', nullable: true),
                 ]
@@ -1917,9 +1949,10 @@ class AuthController extends Controller
     public function apiStoreCustomer(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'phone' => ['required', 'string', 'max:20', 'unique:customers,phone'],
-            'name' => ['required', 'string', 'max:255'],
-            'address' => ['nullable', 'string', 'max:1000'],
+            'phone'      => ['required', 'string', 'max:20', 'unique:customers,phone'],
+            'remote_jid' => ['nullable', 'string', 'max:255'],
+            'name'       => ['required', 'string', 'max:255'],
+            'address'    => ['nullable', 'string', 'max:1000'],
         ]);
 
         $customer = Customer::query()->create($validated);
@@ -1935,8 +1968,8 @@ class AuthController extends Controller
         path: '/api/customers/{phone}',
         operationId: 'updateCustomer',
         tags: ['Customers'],
-        summary: 'Update customer name or address',
-        description: 'The phone number cannot be changed. Only name and address can be updated.',
+        summary: 'Update customer data',
+        description: 'The phone number cannot be changed. Name, address, and remoteJid can be updated.',
         parameters: [
             new OA\Parameter(
                 name: 'phone',
@@ -1951,6 +1984,7 @@ class AuthController extends Controller
             content: new OA\JsonContent(
                 required: ['name'],
                 properties: [
+                    new OA\Property(property: 'remote_jid', type: 'string', nullable: true, example: '96501012345@s.whatsapp.net'),
                     new OA\Property(property: 'name', type: 'string', example: 'محمد أحمد محدث'),
                     new OA\Property(property: 'address', type: 'string', example: 'الإسكندرية - سيدي بشر', nullable: true),
                 ]
@@ -1971,8 +2005,9 @@ class AuthController extends Controller
         }
 
         $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'address' => ['nullable', 'string', 'max:1000'],
+            'remote_jid' => ['nullable', 'string', 'max:255'],
+            'name'       => ['required', 'string', 'max:255'],
+            'address'    => ['nullable', 'string', 'max:1000'],
         ]);
 
         $customer->update($validated);
@@ -2326,14 +2361,15 @@ class AuthController extends Controller
             ? (bool) $overrides[$chatId]
             : $global;
 
-        return [
-            'phone'       => $customer->phone,
-            'name'        => $customer->name,
-            'address'     => $customer->address,
-            'auto_reply'  => $autoReplyEnabled,
-            'created_at'  => optional($customer->created_at)?->toISOString(),
-            'updated_at'  => optional($customer->updated_at)?->toISOString(),
-        ];
+            return [
+                'phone'       => $customer->phone,
+                'remote_jid'  => $customer->remote_jid,
+                'name'        => $customer->name,
+                'address'     => $customer->address,
+                'auto_reply'  => $autoReplyEnabled,
+                'created_at'  => optional($customer->created_at)?->toISOString(),
+                'updated_at'  => optional($customer->updated_at)?->toISOString(),
+            ];
     }
 
     private function transformComplaintForApi(Complaint $complaint): array

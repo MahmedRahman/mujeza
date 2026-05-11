@@ -79,6 +79,7 @@
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align: right;">تاريخ التسجيل</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align: right;">الاسم</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align: right;">الرقم</th>
+                            <th style="padding: 10px; border: 1px solid #efe3b7; text-align: right;">remoteJid</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align: right;">العنوان</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align: center;">الرد الآلي</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align: right;">الإجراءات</th>
@@ -98,6 +99,9 @@
                                 <td style="padding: 10px; border: 1px solid #efe3b7; font-weight: 600;">{{ $customer->name }}</td>
                                 <td style="padding: 10px; border: 1px solid #efe3b7; font-weight: 700; direction: ltr; text-align: right;">
                                     <span style="background:#f1f5f9; border-radius:6px; padding:3px 8px; font-family:monospace;">{{ $customer->phone }}</span>
+                                </td>
+                                <td style="padding: 10px; border: 1px solid #efe3b7; color:#4b5563; font-size:13px; direction:ltr; text-align:right;">
+                                    <span style="font-family:monospace;">{{ $customer->remote_jid ?? '—' }}</span>
                                 </td>
                                 <td style="padding: 10px; border: 1px solid #efe3b7; color: #4b5563;">{{ $customer->address ?? '—' }}</td>
 
