@@ -1986,7 +1986,7 @@ class AuthController extends Controller
         $orders = Order::query()
             ->where('remote_jid', $remoteJid)
             ->latest()
-            ->get(['order_number', 'status', 'created_at']);
+            ->get(['order_number', 'status', 'items_text', 'created_at']);
 
         $complaints = Complaint::query()
             ->where('remote_jid', $remoteJid)
@@ -2003,6 +2003,7 @@ class AuthController extends Controller
                 'orders' => $orders->map(fn ($o) => [
                     'order_number' => $o->order_number,
                     'status'       => $o->status,
+                    'items'        => $o->items_text,
                 ])->values(),
 
                 'complaints' => $complaints->map(fn ($c) => [
