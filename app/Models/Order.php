@@ -25,5 +25,10 @@ class Order extends Model
     {
         return $this->hasMany(OrderItem::class);
     }
+
+    public function customer()
+    {
+        return $this->belongsTo(Customer::class, 'remote_jid', 'remote_jid');
+    }
 }
 

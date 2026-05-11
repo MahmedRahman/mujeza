@@ -80,6 +80,8 @@
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align: right;">remoteJid</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align: right;">الاسم</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align: right;">الرقم</th>
+                            <th style="padding: 10px; border: 1px solid #efe3b7; text-align: center;">الطلبات</th>
+                            <th style="padding: 10px; border: 1px solid #efe3b7; text-align: center;">الشكاوي</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align: center;">الرد الآلي</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align: right;">الإجراءات</th>
                         </tr>
@@ -101,6 +103,20 @@
                                 <td style="padding: 10px; border: 1px solid #efe3b7; font-weight: 600;">{{ $customer->name }}</td>
                                 <td style="padding: 10px; border: 1px solid #efe3b7; font-weight: 700; direction: ltr; text-align: right;">
                                     <span style="background:#f1f5f9; border-radius:6px; padding:3px 8px; font-family:monospace;">{{ $customer->phone ?? '—' }}</span>
+                                </td>
+
+                                <td style="padding: 10px; border: 1px solid #efe3b7; text-align: center;">
+                                    <a href="{{ route('orders.index', ['q' => $customer->remote_jid]) }}"
+                                       style="display:inline-block; min-width:36px; background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; border-radius:20px; padding:3px 12px; font-weight:800; font-size:14px; text-decoration:none;">
+                                        {{ $customer->orders_count }}
+                                    </a>
+                                </td>
+
+                                <td style="padding: 10px; border: 1px solid #efe3b7; text-align: center;">
+                                    <a href="{{ route('complaints.index', ['q' => $customer->remote_jid]) }}"
+                                       style="display:inline-block; min-width:36px; background:#fff7ed; color:#c2410c; border:1px solid #fed7aa; border-radius:20px; padding:3px 12px; font-weight:800; font-size:14px; text-decoration:none;">
+                                        {{ $customer->complaints_count }}
+                                    </a>
                                 </td>
 
                                 {{-- ─── Toggle الرد الآلي لكل مستخدم ─── --}}

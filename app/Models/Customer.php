@@ -16,4 +16,14 @@ class Customer extends Model
         'name',
         'address',
     ];
+
+    public function orders()
+    {
+        return $this->hasMany(Order::class, 'remote_jid', 'remote_jid');
+    }
+
+    public function complaints()
+    {
+        return $this->hasMany(Complaint::class, 'remote_jid', 'remote_jid');
+    }
 }

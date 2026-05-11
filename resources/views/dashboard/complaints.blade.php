@@ -44,6 +44,8 @@
                         <tr style="background: #f8f2de;">
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align: right; white-space:nowrap;">تاريخ الإدخال</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align: right;">remoteJid</th>
+                            <th style="padding: 10px; border: 1px solid #efe3b7; text-align: right;">الاسم</th>
+                            <th style="padding: 10px; border: 1px solid #efe3b7; text-align: right;">التليفون</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align: right;">العنوان</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align: right;">الوصف</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align: center;">الإجراءات</th>
@@ -58,6 +60,25 @@
                                 </td>
                                 <td style="padding: 10px; border: 1px solid #efe3b7; font-size:13px; direction:ltr; text-align:right;">
                                     <span style="font-family:monospace; color:#4b5563;">{{ $complaint->remote_jid ?? '—' }}</span>
+                                </td>
+                                <td style="padding: 10px; border: 1px solid #efe3b7; font-weight:600; white-space:nowrap;">
+                                    @if ($complaint->customer)
+                                        <a href="{{ route('customers.edit', $complaint->customer->remote_jid) }}"
+                                           style="text-decoration:none; color:#92400e;">
+                                            {{ $complaint->customer->name }}
+                                        </a>
+                                    @else
+                                        <span style="color:#9ca3af;">—</span>
+                                    @endif
+                                </td>
+                                <td style="padding: 10px; border: 1px solid #efe3b7; white-space:nowrap;">
+                                    @if ($complaint->customer?->phone)
+                                        <span style="background:#f1f5f9; border-radius:6px; padding:3px 8px; font-family:monospace; font-size:13px; direction:ltr; display:inline-block;">
+                                            {{ $complaint->customer->phone }}
+                                        </span>
+                                    @else
+                                        <span style="color:#9ca3af;">—</span>
+                                    @endif
                                 </td>
                                 <td style="padding: 10px; border: 1px solid #efe3b7; font-weight:700;">
                                     {{ $complaint->title }}

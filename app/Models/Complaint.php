@@ -11,5 +11,10 @@ class Complaint extends Model
         'title',
         'description',
     ];
+
+    public function customer()
+    {
+        return $this->belongsTo(Customer::class, 'remote_jid', 'remote_jid');
+    }
 }
 

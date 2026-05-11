@@ -23,6 +23,8 @@
                         <tr style="background: #f8f2de;">
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">رقم الطلب</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">remoteJid</th>
+                            <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">الاسم</th>
+                            <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">العنوان</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">الحالة</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">تاريخ الإدخال</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">الإجراءات</th>
@@ -36,8 +38,26 @@
                                 </td>
                                 <td style="padding: 10px; border: 1px solid #efe3b7; font-size:13px; direction:ltr; text-align:right;">
                                     <span style="font-family:monospace; color:#4b5563;">{{ $order->remote_jid ?? '—' }}</span>
-                                    @if($order->customer_name)
-                                        <div style="font-size:12px; color:#6b7280; direction:rtl; text-align:right;">{{ $order->customer_name }}</div>
+                                </td>
+                                <td style="padding: 10px; border: 1px solid #efe3b7; font-weight:600; white-space:nowrap;">
+                                    @if ($order->customer)
+                                        <a href="{{ route('customers.edit', $order->customer->remote_jid) }}"
+                                           style="text-decoration:none; color:#92400e;">
+                                            {{ $order->customer->name }}
+                                        </a>
+                                    @elseif ($order->customer_name)
+                                        <span style="color:#374151;">{{ $order->customer_name }}</span>
+                                    @else
+                                        <span style="color:#9ca3af;">—</span>
+                                    @endif
+                                </td>
+                                <td style="padding: 10px; border: 1px solid #efe3b7; color:#4b5563; font-size:13px; max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                    @if ($order->customer?->address)
+                                        {{ $order->customer->address }}
+                                    @elseif ($order->delivery_address)
+                                        {{ $order->delivery_address }}
+                                    @else
+                                        <span style="color:#9ca3af;">—</span>
                                     @endif
                                 </td>
                                 <td style="padding: 10px; border: 1px solid #efe3b7; color:#374151;">

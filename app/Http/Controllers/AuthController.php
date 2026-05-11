@@ -126,7 +126,7 @@ class AuthController extends Controller
             });
         }
 
-        $customers = $customersQuery->latest()->paginate(20)->withQueryString();
+        $customers = $customersQuery->withCount(['orders', 'complaints'])->latest()->paginate(20)->withQueryString();
 
         $autoReplyRaw = (string) (Setting::query()->where('key', 'whatsapp_auto_reply_global_enabled')->value('value') ?? '1');
         $autoReplyEnabled = in_array(strtolower($autoReplyRaw), ['1', 'true', 'on', 'yes'], true);
@@ -559,14 +559,25 @@ class AuthController extends Controller
             ->with('success', 'تم حذف الفرع بنجاح.');
     }
 
-    public function orders(): View
+    public function orders(Request $request): View
     {
-        $orders = Order::query()
-            ->latest()
-            ->get();
+        $q = trim((string) $request->query('q'));
+
+        $ordersQuery = Order::query();
+        if ($q !== '') {
+            $ordersQuery->where(function ($builder) use ($q) {
+                $builder->where('remote_jid', 'like', '%'.$q.'%')
+                    ->orWhere('customer_name', 'like', '%'.$q.'%')
+                    ->orWhere('phone', 'like', '%'.$q.'%')
+                    ->orWhere('order_number', 'like', '%'.$q.'%');
+            });
+        }
+
+        $orders = $ordersQuery->with('customer')->latest()->get();
 
         return view('dashboard.orders', [
             'orders' => $orders,
+            'q'      => $q,
         ]);
     }
 
@@ -684,16 +695,28 @@ class AuthController extends Controller
         return $this->showOrder($order);
     }
 
-    public function complaints(): View
+    public function complaints(Request $request): View
     {
-        $complaints = Complaint::query()->latest()->get();
+        $q = trim((string) $request->query('q'));
+
+        $complaintsQuery = Complaint::query();
+        if ($q !== '') {
+            $complaintsQuery->where(function ($builder) use ($q) {
+                $builder->where('remote_jid', 'like', '%'.$q.'%')
+                    ->orWhere('title', 'like', '%'.$q.'%')
+                    ->orWhere('description', 'like', '%'.$q.'%');
+            });
+        }
+
+        $complaints = $complaintsQuery->with('customer')->latest()->get();
 
         return view('dashboard.complaints', [
-            'complaints' => $complaints,
+            'complaints'      => $complaints,
+            'q'               => $q,
             'complaintsStats' => [
-                'total' => Complaint::query()->count(),
-                'today' => Complaint::query()->whereDate('created_at', now()->toDateString())->count(),
-                'last7days' => Complaint::query()->where('created_at', '>=', now()->subDays(7))->count(),
+                'total'    => Complaint::query()->count(),
+                'today'    => Complaint::query()->whereDate('created_at', now()->toDateString())->count(),
+                'last7days'=> Complaint::query()->where('created_at', '>=', now()->subDays(7))->count(),
             ],
         ]);
     }
