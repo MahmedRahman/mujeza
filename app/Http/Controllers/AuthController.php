@@ -1983,12 +1983,34 @@ class AuthController extends Controller
             $newlyCreated = true;
         }
 
+        $orders = Order::query()
+            ->where('remote_jid', $remoteJid)
+            ->latest()
+            ->get(['order_number', 'status', 'created_at']);
+
+        $complaints = Complaint::query()
+            ->where('remote_jid', $remoteJid)
+            ->latest()
+            ->get(['id', 'title', 'status', 'created_at']);
+
         return response()->json(array_merge(
             [
                 'found'         => ! $newlyCreated,
                 'newly_created' => $newlyCreated,
             ],
-            $this->transformCustomerForApi($customer, $autoReply)
+            $this->transformCustomerForApi($customer, $autoReply),
+            [
+                'orders' => $orders->map(fn ($o) => [
+                    'order_number' => $o->order_number,
+                    'status'       => $o->status,
+                ])->values(),
+
+                'complaints' => $complaints->map(fn ($c) => [
+                    'id'     => $c->id,
+                    'title'  => $c->title,
+                    'status' => $c->status,
+                ])->values(),
+            ]
         ));
     }
 
