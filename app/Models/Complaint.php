@@ -7,9 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 class Complaint extends Model
 {
     protected $fillable = [
+        'remote_jid',
         'title',
         'description',
-        'phone',
     ];
 }
 

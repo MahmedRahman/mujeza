@@ -182,7 +182,7 @@
                 <a class="{{ request()->routeIs('products.*') ? 'active' : '' }}" href="{{ route('products.index') }}">المنتجات</a>
                 <a class="{{ request()->routeIs('orders.*') ? 'active' : '' }}" href="{{ route('orders.index') }}">الطلبات</a>
                 <a class="{{ request()->routeIs('branches.*') ? 'active' : '' }}" href="{{ route('branches.index') }}">الفروع</a>
-                <a class="{{ request()->routeIs('complaints.*') ? 'active' : '' }}" href="{{ route('complaints.index') }}">الشكاوى والاستفسارات</a>
+                <a class="{{ request()->routeIs('complaints.*') ? 'active' : '' }}" href="{{ route('complaints.index') }}">الشكاوى</a>
                 <a class="{{ request()->routeIs('faqs.*') ? 'active' : '' }}" href="{{ route('faqs.index') }}">الأسئلة الشائعة</a>
 
                 <div class="nav-group">

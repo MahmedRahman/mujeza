@@ -213,8 +213,8 @@
                 "tags": [
                     "Complaints"
                 ],
-                "summary": "Get complaints and inquiries list",
-                "description": "Returns complaints list with optional text search in title, description, or phone.",
+                "summary": "Get complaints list",
+                "description": "Returns complaints list with optional text search in title, description, or remote_jid.",
                 "operationId": "getComplaints",
                 "parameters": [
                     {
@@ -238,7 +238,7 @@
                 "tags": [
                     "Complaints"
                 ],
-                "summary": "Create complaint or inquiry",
+                "summary": "Create complaint",
                 "operationId": "storeComplaint",
                 "requestBody": {
                     "required": true,
@@ -247,10 +247,14 @@
                             "schema": {
                                 "required": [
                                     "title",
-                                    "description",
-                                    "phone"
+                                    "description"
                                 ],
                                 "properties": {
+                                    "remote_jid": {
+                                        "type": "string",
+                                        "example": "96550000000@s.whatsapp.net",
+                                        "nullable": true
+                                    },
                                     "title": {
                                         "type": "string",
                                         "example": "استفسار عن المنتج"
@@ -258,10 +262,6 @@
                                     "description": {
                                         "type": "string",
                                         "example": "أريد معرفة طريقة الاستخدام المناسبة."
-                                    },
-                                    "phone": {
-                                        "type": "string",
-                                        "example": "96550000000"
                                     }
                                 },
                                 "type": "object"
@@ -306,7 +306,7 @@
                 "tags": [
                     "Complaints"
                 ],
-                "summary": "Update complaint or inquiry",
+                "summary": "Update complaint",
                 "operationId": "updateComplaint",
                 "parameters": [
                     {
@@ -325,10 +325,14 @@
                             "schema": {
                                 "required": [
                                     "title",
-                                    "description",
-                                    "phone"
+                                    "description"
                                 ],
                                 "properties": {
+                                    "remote_jid": {
+                                        "type": "string",
+                                        "example": "96550000000@s.whatsapp.net",
+                                        "nullable": true
+                                    },
                                     "title": {
                                         "type": "string",
                                         "example": "شكوى عن تأخر الرد"
@@ -336,10 +340,6 @@
                                     "description": {
                                         "type": "string",
                                         "example": "لم يصلني رد حتى الآن."
-                                    },
-                                    "phone": {
-                                        "type": "string",
-                                        "example": "96550000000"
                                     }
                                 },
                                 "type": "object"

@@ -700,16 +700,16 @@ class AuthController extends Controller
     public function storeComplaint(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'title' => ['required', 'string', 'max:255'],
+            'remote_jid'  => ['nullable', 'string', 'max:255'],
+            'title'       => ['required', 'string', 'max:255'],
             'description' => ['required', 'string', 'max:3000'],
-            'phone' => ['required', 'string', 'max:50'],
         ]);
 
         Complaint::query()->create($validated);
 
         return redirect()
             ->route('complaints.index')
-            ->with('success', 'تم حفظ الشكوى/الاستفسار بنجاح.');
+            ->with('success', 'تم حفظ الشكوى بنجاح.');
     }
 
     public function editComplaint(Complaint $complaint): View
@@ -722,16 +722,16 @@ class AuthController extends Controller
     public function updateComplaint(Request $request, Complaint $complaint): RedirectResponse
     {
         $validated = $request->validate([
-            'title' => ['required', 'string', 'max:255'],
+            'remote_jid'  => ['nullable', 'string', 'max:255'],
+            'title'       => ['required', 'string', 'max:255'],
             'description' => ['required', 'string', 'max:3000'],
-            'phone' => ['required', 'string', 'max:50'],
         ]);
 
         $complaint->update($validated);
 
         return redirect()
             ->route('complaints.index')
-            ->with('success', 'تم تعديل الشكوى/الاستفسار بنجاح.');
+            ->with('success', 'تم تعديل الشكوى بنجاح.');
     }
 
     public function destroyComplaint(Complaint $complaint): RedirectResponse
@@ -953,8 +953,8 @@ class AuthController extends Controller
         path: '/api/complaints',
         operationId: 'getComplaints',
         tags: ['Complaints'],
-        summary: 'Get complaints and inquiries list',
-        description: 'Returns complaints list with optional text search in title, description, or phone.',
+        summary: 'Get complaints list',
+        description: 'Returns complaints list with optional text search in title, description, or remote_jid.',
         parameters: [
             new OA\Parameter(
                 name: 'q',
@@ -980,7 +980,7 @@ class AuthController extends Controller
             $complaintsQuery->where(function ($builder) use ($query) {
                 $builder->where('title', 'like', '%'.$query.'%')
                     ->orWhere('description', 'like', '%'.$query.'%')
-                    ->orWhere('phone', 'like', '%'.$query.'%');
+                    ->orWhere('remote_jid', 'like', '%'.$query.'%');
             });
         }
 
@@ -999,15 +999,15 @@ class AuthController extends Controller
         path: '/api/complaints',
         operationId: 'storeComplaint',
         tags: ['Complaints'],
-        summary: 'Create complaint or inquiry',
+        summary: 'Create complaint',
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
-                required: ['title', 'description', 'phone'],
+                required: ['title', 'description'],
                 properties: [
+                    new OA\Property(property: 'remote_jid', type: 'string', example: '96550000000@s.whatsapp.net', nullable: true),
                     new OA\Property(property: 'title', type: 'string', example: 'استفسار عن المنتج'),
                     new OA\Property(property: 'description', type: 'string', example: 'أريد معرفة طريقة الاستخدام المناسبة.'),
-                    new OA\Property(property: 'phone', type: 'string', example: '96550000000'),
                 ]
             )
         ),
@@ -1019,16 +1019,16 @@ class AuthController extends Controller
     public function apiStoreComplaint(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'title' => ['required', 'string', 'max:255'],
+            'remote_jid'  => ['nullable', 'string', 'max:255'],
+            'title'       => ['required', 'string', 'max:255'],
             'description' => ['required', 'string', 'max:3000'],
-            'phone' => ['required', 'string', 'max:50'],
         ]);
 
         $complaint = Complaint::query()->create($validated);
 
         return response()->json([
             'success' => true,
-            'message' => 'تم حفظ الشكوى/الاستفسار بنجاح.',
+            'message' => 'تم حفظ الشكوى بنجاح.',
             'data' => $this->transformComplaintForApi($complaint),
         ], 201);
     }
@@ -1062,7 +1062,7 @@ class AuthController extends Controller
         path: '/api/complaints/{id}',
         operationId: 'updateComplaint',
         tags: ['Complaints'],
-        summary: 'Update complaint or inquiry',
+        summary: 'Update complaint',
         parameters: [
             new OA\Parameter(
                 name: 'id',
@@ -1074,11 +1074,11 @@ class AuthController extends Controller
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
-                required: ['title', 'description', 'phone'],
+                required: ['title', 'description'],
                 properties: [
+                    new OA\Property(property: 'remote_jid', type: 'string', example: '96550000000@s.whatsapp.net', nullable: true),
                     new OA\Property(property: 'title', type: 'string', example: 'شكوى عن تأخر الرد'),
                     new OA\Property(property: 'description', type: 'string', example: 'لم يصلني رد حتى الآن.'),
-                    new OA\Property(property: 'phone', type: 'string', example: '96550000000'),
                 ]
             )
         ),
@@ -1090,16 +1090,16 @@ class AuthController extends Controller
     public function apiUpdateComplaint(Request $request, Complaint $complaint): JsonResponse
     {
         $validated = $request->validate([
-            'title' => ['required', 'string', 'max:255'],
+            'remote_jid'  => ['nullable', 'string', 'max:255'],
+            'title'       => ['required', 'string', 'max:255'],
             'description' => ['required', 'string', 'max:3000'],
-            'phone' => ['required', 'string', 'max:50'],
         ]);
 
         $complaint->update($validated);
 
         return response()->json([
             'success' => true,
-            'message' => 'تم تعديل الشكوى/الاستفسار بنجاح.',
+            'message' => 'تم تعديل الشكوى بنجاح.',
             'data' => $this->transformComplaintForApi($complaint->fresh()),
         ]);
     }
@@ -1127,7 +1127,7 @@ class AuthController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'تم حذف الشكوى/الاستفسار بنجاح.',
+            'message' => 'تم حذف الشكوى بنجاح.',
         ]);
     }
 
@@ -2456,12 +2456,12 @@ class AuthController extends Controller
     private function transformComplaintForApi(Complaint $complaint): array
     {
         return [
-            'id' => $complaint->id,
-            'title' => $complaint->title,
+            'id'          => $complaint->id,
+            'remote_jid'  => $complaint->remote_jid,
+            'title'       => $complaint->title,
             'description' => $complaint->description,
-            'phone' => $complaint->phone,
-            'created_at' => optional($complaint->created_at)?->toISOString(),
-            'updated_at' => optional($complaint->updated_at)?->toISOString(),
+            'created_at'  => optional($complaint->created_at)?->toISOString(),
+            'updated_at'  => optional($complaint->updated_at)?->toISOString(),
         ];
     }
 
