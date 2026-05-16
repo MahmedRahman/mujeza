@@ -11,6 +11,8 @@ use App\Models\Disease;
 use App\Models\Product;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\OrderStatusHistory;
+use App\Services\DashboardAlertsService;
 use App\Models\Setting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -20,6 +22,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use OpenApi\Attributes as OA;
 
@@ -59,9 +62,13 @@ class AuthController extends Controller
             ]);
     }
 
-    public function dashboard(): View
+    public function dashboard(DashboardAlertsService $dashboardAlerts): View
     {
+        $alerts = $dashboardAlerts->build();
+
         return view('dashboard.home', [
+            'alerts' => $alerts,
+            'hasAlerts' => $dashboardAlerts->hasAlerts($alerts),
             'stats' => [
                 'products' => Product::query()->count(),
                 'available_products' => Product::query()->where('is_available', true)->count(),
@@ -583,37 +590,19 @@ class AuthController extends Controller
 
     public function createOrder(): View
     {
-        $statuses = [
-            'قيد المعالجة',
-            'تم الاستلام',
-            'قيد التجهيز',
-            'تم الشحن',
-            'تم التسليم',
-            'ملغي',
-        ];
-
         $customers = Customer::query()->orderBy('name')->get(['remote_jid', 'phone', 'name', 'address']);
 
         return view('dashboard.orders-create', [
-            'statuses'  => $statuses,
+            'statuses'  => Order::STATUSES,
             'customers' => $customers,
         ]);
     }
 
     public function editOrder(Order $order): View
     {
-        $statuses = [
-            'قيد المعالجة',
-            'تم الاستلام',
-            'قيد التجهيز',
-            'تم الشحن',
-            'تم التسليم',
-            'ملغي',
-        ];
-
         return view('dashboard.orders-edit', [
             'order'    => $order,
-            'statuses' => $statuses,
+            'statuses' => Order::STATUSES,
         ]);
     }
 
@@ -623,7 +612,7 @@ class AuthController extends Controller
             'remote_jid'       => ['nullable', 'string', 'max:255'],
             'delivery_address' => ['nullable', 'string', 'max:2000'],
             'items'            => ['required', 'string', 'max:5000'],
-            'status'           => ['required', 'string', 'max:100'],
+            'status'           => ['required', 'string', Rule::in(Order::STATUSES)],
         ]);
 
         $orderNumber = (int) (Order::query()->max('order_number') ?? 0) + 1;
@@ -631,7 +620,7 @@ class AuthController extends Controller
         $remoteJid = trim((string) ($validated['remote_jid'] ?? ''));
         $customer  = $remoteJid ? Customer::query()->where('remote_jid', $remoteJid)->first() : null;
 
-        Order::query()->create([
+        $order = Order::query()->create([
             'order_number'     => $orderNumber,
             'remote_jid'       => $remoteJid ?: null,
             'customer_name'    => $customer?->name,
@@ -639,11 +628,15 @@ class AuthController extends Controller
             'delivery_address' => trim((string) ($validated['delivery_address'] ?? '')),
             'items_text'       => trim((string) $validated['items']),
             'status'           => $validated['status'],
+            'status_changed_at'=> now(),
             'total_amount'     => 0,
+            'delivery_fee'     => 0,
         ]);
 
+        $this->recordOrderStatusChange($order, $validated['status'], 'إنشاء الطلب');
+
         return redirect()
-            ->route('orders.index')
+            ->route('orders.show', $order)
             ->with('success', 'تم إنشاء الطلب بنجاح.');
     }
 
@@ -652,7 +645,7 @@ class AuthController extends Controller
         $validated = $request->validate([
             'remote_jid'       => ['nullable', 'string', 'max:255'],
             'delivery_address' => ['nullable', 'string', 'max:2000'],
-            'status'           => ['required', 'string', 'max:100'],
+            'status'           => ['required', 'string', Rule::in(Order::STATUSES)],
             'notify_customer'  => ['nullable', 'boolean'],
         ]);
 
@@ -667,12 +660,17 @@ class AuthController extends Controller
             'phone'            => $customer?->phone ?? $order->phone,
             'delivery_address' => trim((string) ($validated['delivery_address'] ?? '')),
             'status'           => $newStatus,
+            'status_changed_at'=> $oldStatus !== $newStatus ? now() : $order->status_changed_at,
         ]);
+
+        if ($oldStatus !== $newStatus) {
+            $this->recordOrderStatusChange($order, $newStatus, 'تعديل من صفحة التعديل');
+        }
 
         $shouldNotify = (bool) ($validated['notify_customer'] ?? false);
 
         if ($shouldNotify && $remoteJid !== '') {
-            $customerName = $customer?->name ?? $order->customer_name ?? 'عزيزي العميل';
+            $customerName = $order->displayCustomerName() !== '—' ? $order->displayCustomerName() : 'عزيزي العميل';
             $message = "مرحباً {$customerName} 👋\n\n"
                 . "تم تحديث حالة طلبك رقم *{$order->order_number}*\n\n"
                 . "📦 الحالة الجديدة: *{$newStatus}*\n\n"
@@ -682,8 +680,75 @@ class AuthController extends Controller
         }
 
         return redirect()
-            ->route('orders.index')
+            ->route('orders.show', $order)
             ->with('success', 'تم تعديل الطلب بنجاح.');
+    }
+
+    public function updateOrderStatus(Request $request, Order $order): RedirectResponse
+    {
+        $validated = $request->validate([
+            'status'          => ['required', 'string', Rule::in(Order::STATUSES)],
+            'notify_customer' => ['nullable', 'boolean'],
+            'status_note'     => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $oldStatus = $order->status;
+        $newStatus = $validated['status'];
+
+        if ($oldStatus !== $newStatus) {
+            $order->update([
+                'status'            => $newStatus,
+                'status_changed_at' => now(),
+            ]);
+
+            $this->recordOrderStatusChange(
+                $order,
+                $newStatus,
+                trim((string) ($validated['status_note'] ?? '')) ?: 'تغيير الحالة من صفحة التفاصيل'
+            );
+        }
+
+        $remoteJid = trim((string) ($order->remote_jid ?? ''));
+        if ($request->boolean('notify_customer') && $remoteJid !== '' && $oldStatus !== $newStatus) {
+            $customerName = $order->displayCustomerName() !== '—' ? $order->displayCustomerName() : 'عزيزي العميل';
+            $message = "مرحباً {$customerName} 👋\n\n"
+                . "تم تحديث حالة طلبك رقم *{$order->order_number}*\n\n"
+                . "📦 الحالة الجديدة: *{$newStatus}*\n\n"
+                . "شكراً لتعاملكم معنا 🌿";
+
+            $this->sendWhatsAppText($remoteJid, $message);
+        }
+
+        return redirect()
+            ->route('orders.show', $order)
+            ->with('success', 'تم تحديث حالة الطلب بنجاح.');
+    }
+
+    public function updateOrderNotes(Request $request, Order $order): RedirectResponse
+    {
+        $validated = $request->validate([
+            'internal_notes' => ['nullable', 'string', 'max:5000'],
+            'delivery_fee'   => ['nullable', 'numeric', 'min:0'],
+        ]);
+
+        $order->update([
+            'internal_notes' => trim((string) ($validated['internal_notes'] ?? '')),
+            'delivery_fee'   => (float) ($validated['delivery_fee'] ?? 0),
+        ]);
+
+        return redirect()
+            ->route('orders.show', $order)
+            ->with('success', 'تم حفظ الملاحظات بنجاح.');
+    }
+
+    private function recordOrderStatusChange(Order $order, string $status, ?string $note = null): void
+    {
+        OrderStatusHistory::query()->create([
+            'order_id'   => $order->id,
+            'status'     => $status,
+            'changed_by' => Auth::user()?->email,
+            'note'       => $note,
+        ]);
     }
 
     private function sendWhatsAppText(string $remoteJid, string $text): bool
@@ -741,16 +806,21 @@ class AuthController extends Controller
 
     public function showOrder(Order $order): View
     {
-        $order->load('items');
+        $order->load(['items', 'customer', 'statusHistories']);
 
-        return view('dashboard.orders-invoice', [
-            'order' => $order,
+        return view('dashboard.orders-show', [
+            'order'    => $order,
+            'statuses' => Order::STATUSES,
         ]);
     }
 
     public function invoiceOrder(Order $order): View
     {
-        return $this->showOrder($order);
+        $order->load(['items', 'customer']);
+
+        return view('dashboard.orders-invoice', [
+            'order' => $order,
+        ]);
     }
 
     public function complaints(Request $request): View
@@ -1265,7 +1335,7 @@ class AuthController extends Controller
                 properties: [
                     new OA\Property(property: 'remote_jid', type: 'string', example: '96550000000@s.whatsapp.net', nullable: true),
                     new OA\Property(property: 'delivery_address', type: 'string', example: 'الكويت - حولي - شارع بيروت - قطعة 4 - منزل 12', nullable: true),
-                    new OA\Property(property: 'status', type: 'string', example: 'قيد المعالجة'),
+                    new OA\Property(property: 'status', type: 'string', example: 'طلب جديد'),
                     new OA\Property(property: 'items', type: 'string', example: 'عسل سدر 2 عبوة + عسل كشميري 1 عبوة'),
                 ]
             )
@@ -1290,7 +1360,7 @@ class AuthController extends Controller
         $validated = $request->validate([
             'remote_jid'       => ['nullable', 'string', 'max:255'],
             'delivery_address' => ['nullable', 'string', 'max:2000'],
-            'status'           => ['nullable', 'string', 'max:100'],
+            'status'           => ['nullable', 'string', Rule::in(Order::STATUSES)],
             'items'            => ['required', 'string', 'max:5000'],
         ]);
 
@@ -1306,7 +1376,7 @@ class AuthController extends Controller
                 'phone'            => $customer?->phone,
                 'delivery_address' => trim((string) ($validated['delivery_address'] ?? '')),
                 'items_text'       => trim((string) $validated['items']),
-                'status'           => $validated['status'] ?? 'قيد المعالجة',
+                'status'           => $validated['status'] ?? Order::DEFAULT_STATUS,
                 'total_amount'     => 0,
             ]);
         });
@@ -1323,7 +1393,7 @@ class AuthController extends Controller
         operationId: 'getOrderStatusByPhone',
         tags: ['Orders'],
         summary: 'Get order status',
-        description: 'Returns latest order status and all matching orders by order_number, customer_name, or phone. When searching by phone, cancelled ("ملغي") and delivered ("تم التسليم") orders are excluded by default — pass include_closed=1 to include them.',
+        description: 'Returns latest order status and all matching orders by order_number, customer_name, or phone. When searching by phone, cancelled ("ملغي") and completed ("مكتمل") orders are excluded by default — pass include_closed=1 to include them.',
         parameters: [
             new OA\Parameter(
                 name: 'order_number',
@@ -1362,7 +1432,7 @@ class AuthController extends Controller
                     properties: [
                         new OA\Property(property: 'success', type: 'boolean', example: true),
                         new OA\Property(property: 'found', type: 'boolean', example: true),
-                        new OA\Property(property: 'latest_status', type: 'string', nullable: true, example: 'قيد المعالجة'),
+                        new OA\Property(property: 'latest_status', type: 'string', nullable: true, example: 'طلب جديد'),
                         new OA\Property(property: 'count', type: 'integer', example: 2),
                         new OA\Property(property: 'latest_order', type: 'object', nullable: true),
                         new OA\Property(property: 'orders', type: 'array', items: new OA\Items(type: 'object')),
@@ -1403,7 +1473,7 @@ class AuthController extends Controller
             $ordersQuery->where('phone', $phone);
 
             if (! $includeClosed) {
-                $ordersQuery->whereNotIn('status', ['ملغي', 'تم التسليم']);
+                $ordersQuery->whereNotIn('status', Order::CLOSED_STATUSES);
             }
         }
 
@@ -1427,7 +1497,7 @@ class AuthController extends Controller
         operationId: 'getOrdersByPhone',
         tags: ['Orders'],
         summary: 'Get active orders by phone number',
-        description: 'Returns all orders for the given phone number, excluding cancelled ("ملغي") and delivered ("تم التسليم") orders.',
+        description: 'Returns all orders for the given phone number, excluding cancelled ("ملغي") and completed ("مكتمل") orders.',
         parameters: [
             new OA\Parameter(
                 name: 'phone',
@@ -1464,7 +1534,7 @@ class AuthController extends Controller
         $orders = Order::query()
             ->with('items')
             ->where('phone', $phone)
-            ->whereNotIn('status', ['ملغي', 'تم التسليم'])
+            ->whereNotIn('status', Order::CLOSED_STATUSES)
             ->latest()
             ->get();
 
@@ -1527,8 +1597,11 @@ class AuthController extends Controller
 
     public function editProduct(Product $product): View
     {
+        $product->load('categories');
+
         return view('dashboard.products-edit', [
             'product' => $product,
+            'categories' => Category::query()->orderBy('title')->get(),
         ]);
     }
 
@@ -1613,6 +1686,8 @@ class AuthController extends Controller
             'product_images' => ['nullable', 'array'],
             'product_images.*' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
             'primary_image_index' => ['nullable', 'integer', 'min:0'],
+            'category_ids' => ['nullable', 'array'],
+            'category_ids.*' => ['integer', 'exists:categories,id'],
         ]);
 
         $galleryImages = $product->gallery_images ?? [];
@@ -1662,6 +1737,8 @@ class AuthController extends Controller
             'gallery_images' => $galleryImages,
             'primary_gallery_image' => $primaryGalleryImage,
         ]);
+
+        $product->categories()->sync($validated['category_ids'] ?? []);
 
         return redirect()
             ->route('products.index')

@@ -21,7 +21,7 @@
 
             <div style="display:flex; gap: 10px;">
                 <a href="{{ route('orders.show', $order) }}" style="text-decoration:none; border:1px solid #d1d5db; background:#fff; color:#111827; padding:8px 12px; border-radius:8px; font-weight:700;">
-                    تفاصيل
+                    صفحة التفاصيل
                 </a>
                 <button type="button" onclick="window.print()" style="border:none; background:#d4af37; color:#111827; padding:8px 14px; border-radius:8px; font-weight:800; cursor:pointer;">
                     طباعة
@@ -33,22 +33,26 @@
             <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px;">
                 <div>
                     <div style="font-weight:800; margin-bottom:6px;">اسم العميل</div>
-                    <div style="color:#374151; font-weight:700;">{{ $order->customer_name }}</div>
+                    <div style="color:#374151; font-weight:700;">{{ $order->displayCustomerName() }}</div>
                 </div>
                 <div>
                     <div style="font-weight:800; margin-bottom:6px;">تليفون العميل</div>
                     <div style="color:#374151; font-weight:700;">
-                        <a href="tel:{{ $order->phone }}" style="color:#1d4ed8; text-decoration:none;">{{ $order->phone }}</a>
+                        @if ($order->displayPhone() !== '—')
+                            <a href="tel:{{ $order->displayPhone() }}" style="color:#1d4ed8; text-decoration:none;">{{ $order->displayPhone() }}</a>
+                        @else
+                            —
+                        @endif
                     </div>
                 </div>
                 <div>
                     <div style="font-weight:800; margin-bottom:6px;">عنوان التوصيل</div>
-                    <div style="color:#374151; font-weight:700;">{{ $order->delivery_address ?: '—' }}</div>
+                    <div style="color:#374151; font-weight:700;">{{ $order->displayAddress() }}</div>
                 </div>
                 <div>
                     <div style="font-weight:800; margin-bottom:6px;">الإجمالي</div>
                     <div style="color:#111827; font-weight:900; font-size: 18px;">
-                        {{ number_format((float) $order->total_amount, 2) }} د.ك
+                        {{ number_format($order->grandTotal(), 2) }} د.ك
                     </div>
                 </div>
             </div>

@@ -58,6 +58,55 @@
                 <textarea name="description" rows="4" required style="width:100%; border:1px solid #d1d5db; border-radius:8px; padding:10px; font-family:inherit;">{{ old('description', $product->description) }}</textarea>
             </div>
 
+            @php
+                $selectedCategoryIds = collect(old('category_ids', $product->categories->pluck('id')->all()))
+                    ->map(fn ($id) => (int) $id)
+                    ->all();
+            @endphp
+            <div style="margin-top:12px; border:1px solid #efe3b7; border-radius:10px; padding:12px; background:#fffcf2;">
+                <label style="display:block; font-weight:700; margin:0 0 8px;">الفئات</label>
+                <p style="margin:0 0 12px; color:#6b7280; font-size:14px;">اختر الفئات المرتبطة بهذا المنتج. يمكنك اختيار أكثر من فئة.</p>
+
+                @if ($categories->isEmpty())
+                    <p style="margin:0; color:#6b7280;">لا توجد فئات مضافة بعد. <a href="{{ route('categories.create') }}" style="color:#111827; font-weight:700;">أضف فئة جديدة</a></p>
+                @else
+                    <div id="categories-grid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap:12px;">
+                        @foreach ($categories as $category)
+                            @php
+                                $isSelected = in_array($category->id, $selectedCategoryIds, true);
+                            @endphp
+                            <label
+                                class="category-card {{ $isSelected ? 'is-selected' : '' }}"
+                                style="display:block; cursor:pointer; border:2px solid {{ $isSelected ? '#d4af37' : '#efe3b7' }}; border-radius:12px; padding:12px; background:{{ $isSelected ? '#fff9e8' : '#fff' }}; transition: border-color .2s, background .2s;"
+                            >
+                                <input
+                                    type="checkbox"
+                                    name="category_ids[]"
+                                    value="{{ $category->id }}"
+                                    {{ $isSelected ? 'checked' : '' }}
+                                    style="position:absolute; opacity:0; width:0; height:0; pointer-events:none;"
+                                >
+                                <div style="display:flex; flex-direction:column; align-items:center; text-align:center; gap:8px;">
+                                    @if ($category->image)
+                                        <img src="{{ asset('storage/' . $category->image) }}" alt="{{ $category->title }}" style="width:72px; height:72px; object-fit:cover; border-radius:10px;">
+                                    @else
+                                        <div style="width:72px; height:72px; border-radius:10px; background:#f3f4f6; display:flex; align-items:center; justify-content:center; color:#6b7280; font-size:12px;">
+                                            بدون صورة
+                                        </div>
+                                    @endif
+                                    <div>
+                                        <div style="font-weight:700; color:#111827; margin-bottom:4px;">{{ $category->title }}</div>
+                                        @if ($category->description)
+                                            <p style="margin:0; color:#6b7280; font-size:12px; line-height:1.4;">{{ \Illuminate\Support\Str::limit($category->description, 60) }}</p>
+                                        @endif
+                                    </div>
+                                </div>
+                            </label>
+                        @endforeach
+                    </div>
+                @endif
+            </div>
+
             <div style="margin-top:12px; border:1px solid #efe3b7; border-radius:10px; padding:12px; background:#fffcf2;">
                 <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px;">
                     <label style="display:block; font-weight:700; margin:0;">الأحجام</label>
@@ -249,6 +298,23 @@
         </form>
     </section>
 
+    <script>
+        (function () {
+            document.querySelectorAll('.category-card').forEach(function (card) {
+                const checkbox = card.querySelector('input[type="checkbox"]');
+
+                function syncCardState() {
+                    const selected = checkbox.checked;
+                    card.classList.toggle('is-selected', selected);
+                    card.style.borderColor = selected ? '#d4af37' : '#efe3b7';
+                    card.style.background = selected ? '#fff9e8' : '#fff';
+                }
+
+                checkbox.addEventListener('change', syncCardState);
+                syncCardState();
+            });
+        })();
+    </script>
     <script>
         (function () {
             function setupDynamicSection(config) {

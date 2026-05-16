@@ -189,7 +189,7 @@
                     <span class="nav-group-title">بيانات النظام</span>
                     <a class="{{ request()->routeIs('settings.*') ? 'active' : '' }}" href="{{ route('settings.index') }}">الإعدادات</a>
                     <a class="{{ request()->routeIs('categories.*') ? 'active' : '' }}" href="{{ route('categories.index') }}">الفئات</a>
-                    <a class="{{ request()->routeIs('diseases.*') ? 'active' : '' }}" href="{{ route('diseases.index') }}">الأمراض</a>
+                    <a class="{{ request()->routeIs('diseases.*') ? 'active' : '' }}" href="{{ route('diseases.index') }}">الاستخدامات</a>
                     <a class="{{ request()->routeIs('conversations.*') ? 'active' : '' }}" href="{{ route('conversations.index') }}">المحادثات</a>
                     @php
                         $appBaseUrl = rtrim((string) config('app.url', url('/')), '/');

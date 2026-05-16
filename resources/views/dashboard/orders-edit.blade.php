@@ -5,10 +5,17 @@
 
 @section('content')
     <section class="card">
-        <h2 style="margin-top: 0; font-weight: 700;">تعديل الطلب #{{ $order->order_number }}</h2>
-        <p style="margin-bottom: 14px; color: #4b5563; font-weight: 500;">
-            عدل بيانات العميل والحالة.
-        </p>
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; margin-bottom:14px;">
+            <div>
+                <h2 style="margin-top: 0; font-weight: 700;">تعديل الطلب #{{ $order->order_number }}</h2>
+                <p style="margin:0; color: #4b5563; font-weight: 500;">
+                    عدل بيانات الربط والحالة. لعرض التفاصيل الكاملة والتتبع استخدم صفحة التفاصيل.
+                </p>
+            </div>
+            <a href="{{ route('orders.show', $order) }}" style="text-decoration:none; border:none; background:#d4af37; color:#111827; padding:8px 14px; border-radius:8px; font-weight:800; white-space:nowrap;">
+                عرض التفاصيل والتتبع
+            </a>
+        </div>
 
         @if ($errors->any())
             <div style="background: #fff1f2; color: #be123c; border: 1px solid #fecdd3; border-radius: 10px; padding: 10px 12px; margin-bottom: 12px;">

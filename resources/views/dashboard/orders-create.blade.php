@@ -71,7 +71,7 @@
                     <select name="status" style="width:100%; border:1px solid #d1d5db; border-radius:8px; padding:10px; font-family:inherit;" required>
                         <option value="">-- اختر --</option>
                         @foreach ($statuses as $st)
-                            <option value="{{ $st }}" {{ old('status') === $st ? 'selected' : '' }}>{{ $st }}</option>
+                            <option value="{{ $st }}" {{ old('status', \App\Models\Order::DEFAULT_STATUS) === $st ? 'selected' : '' }}>{{ $st }}</option>
                         @endforeach
                     </select>
                 </div>

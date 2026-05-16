@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Setting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use OpenApi\Attributes as OA;
@@ -430,6 +431,55 @@ class WhatsAppController extends Controller
             ->values();
 
         return response()->json($chats);
+    }
+
+    /**
+     * @return array{total: int, items: array<int, array<string, mixed>>, error: string|null}
+     */
+    public function humanInterventionChats(int $limit = 8): array
+    {
+        return Cache::remember('dashboard.human_intervention_chats', 90, function () use ($limit) {
+            $cfg = $this->evoSettings();
+            $globalAutoReplyEnabled = $this->autoReplyGlobalEnabled();
+            $chatOverrides = $this->autoReplyChatOverrides();
+
+            if (! $cfg['url'] || ! $cfg['instance']) {
+                return ['total' => 0, 'items' => [], 'error' => 'واتساب غير مُعدّ'];
+            }
+
+            try {
+                $response = $this->evoHttp($cfg)
+                    ->timeout(8)
+                    ->post("{$cfg['url']}/chat/findChats/{$cfg['instance']}", []);
+
+                if (! $response->successful()) {
+                    return ['total' => 0, 'items' => [], 'error' => 'تعذر جلب المحادثات'];
+                }
+
+                $raw = $response->json();
+                if (isset($raw['chats'])) {
+                    $raw = $raw['chats'];
+                }
+
+                $needsHuman = $this->buildChatsCollection((array) $raw, $globalAutoReplyEnabled, $chatOverrides)
+                    ->filter(fn (array $chat) => ! $chat['auto_reply_enabled'] && (int) ($chat['unread'] ?? 0) > 0)
+                    ->values();
+
+                return [
+                    'total' => $needsHuman->count(),
+                    'items' => $needsHuman->take($limit)->map(fn (array $chat) => [
+                        'id' => $chat['id'],
+                        'name' => $chat['name'],
+                        'phone' => $chat['phone'],
+                        'unread' => (int) ($chat['unread'] ?? 0),
+                        'last_message' => $chat['last_message'] ?? '',
+                    ])->all(),
+                    'error' => null,
+                ];
+            } catch (\Throwable) {
+                return ['total' => 0, 'items' => [], 'error' => 'تعذر الاتصال بواتساب'];
+            }
+        });
     }
 
     #[OA\Get(

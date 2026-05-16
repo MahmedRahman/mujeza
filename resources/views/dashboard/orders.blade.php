@@ -60,8 +60,21 @@
                                         <span style="color:#9ca3af;">—</span>
                                     @endif
                                 </td>
-                                <td style="padding: 10px; border: 1px solid #efe3b7; color:#374151;">
-                                    {{ $order->status }}
+                                <td style="padding: 10px; border: 1px solid #efe3b7;">
+                                    @php
+                                        $statusStyle = match ($order->status) {
+                                            'طلب جديد' => 'background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe;',
+                                            'تم التأكيد' => 'background:#f0fdf4; color:#15803d; border:1px solid #bbf7d0;',
+                                            'قيد التجهيز' => 'background:#fffbeb; color:#92400e; border:1px solid #fcd34d;',
+                                            'خرج للتوصيل' => 'background:#faf5ff; color:#7e22ce; border:1px solid #e9d5ff;',
+                                            'مكتمل' => 'background:#ecfdf5; color:#047857; border:1px solid #a7f3d0;',
+                                            'ملغي' => 'background:#fff1f2; color:#b91c1c; border:1px solid #fecaca;',
+                                            default => 'background:#f3f4f6; color:#374151; border:1px solid #e5e7eb;',
+                                        };
+                                    @endphp
+                                    <span style="display:inline-block; padding:4px 10px; border-radius:20px; font-size:12px; font-weight:800; {{ $statusStyle }}">
+                                        {{ $order->status }}
+                                    </span>
                                 </td>
                                 <td style="padding: 10px; border: 1px solid #efe3b7; font-weight:700; color:#374151;">
                                     {{ $order->created_at?->format('d/m/Y') ?? '—' }}
@@ -71,7 +84,10 @@
                                 </td>
                                 <td style="padding: 10px; border: 1px solid #efe3b7;">
                                     <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                                        <a href="{{ route('orders.edit', $order) }}" style="text-decoration:none; border:1px solid #fcd34d; background:#fffbeb; color:#92400e; padding:7px 10px; border-radius:8px; font-weight:700;">
+                                        <a href="{{ route('orders.show', $order) }}" style="text-decoration:none; border:1px solid #d4af37; background:#fffbeb; color:#92400e; padding:7px 10px; border-radius:8px; font-weight:700;">
+                                            تفاصيل
+                                        </a>
+                                        <a href="{{ route('orders.edit', $order) }}" style="text-decoration:none; border:1px solid #fcd34d; background:#fff; color:#92400e; padding:7px 10px; border-radius:8px; font-weight:700;">
                                             تعديل
                                         </a>
                                         <a href="{{ route('orders.invoice', $order) }}" style="text-decoration:none; border:1px solid #bfdbfe; background:#eff6ff; color:#1d4ed8; padding:7px 10px; border-radius:8px; font-weight:700;">
