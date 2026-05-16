@@ -600,6 +600,8 @@ class AuthController extends Controller
 
     public function editOrder(Order $order): View
     {
+        $order->load('customer');
+
         return view('dashboard.orders-edit', [
             'order'    => $order,
             'statuses' => Order::STATUSES,

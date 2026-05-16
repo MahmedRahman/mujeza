@@ -22,7 +22,6 @@
                     <thead>
                         <tr style="background: #f8f2de;">
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">رقم الطلب</th>
-                            <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">remoteJid</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">الاسم</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">العنوان</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">الحالة</th>
@@ -35,9 +34,6 @@
                             <tr>
                                 <td style="padding: 10px; border: 1px solid #efe3b7; font-weight:700;">
                                     {{ $order->order_number }}
-                                </td>
-                                <td style="padding: 10px; border: 1px solid #efe3b7; font-size:13px; direction:ltr; text-align:right;">
-                                    <span style="font-family:monospace; color:#4b5563;">{{ $order->remote_jid ?? '—' }}</span>
                                 </td>
                                 <td style="padding: 10px; border: 1px solid #efe3b7; font-weight:600; white-space:nowrap;">
                                     @if ($order->customer)

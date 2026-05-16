@@ -27,17 +27,71 @@
             </div>
         @endif
 
+        <div style="border:1px solid #efe3b7; border-radius:12px; padding:14px; background:#fffcf2; margin-bottom:14px;">
+            <h3 style="margin:0 0 12px; font-weight:800; font-size:15px;">بيانات العميل والحالة</h3>
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px;">
+                <div>
+                    <div style="font-size:12px; color:#6b7280; font-weight:600; margin-bottom:4px;">الاسم</div>
+                    <div style="font-weight:800; color:#111827;">{{ $order->displayCustomerName() }}</div>
+                </div>
+                <div>
+                    <div style="font-size:12px; color:#6b7280; font-weight:600; margin-bottom:4px;">رقم الهاتف</div>
+                    <div style="font-weight:800;">
+                        @if ($order->displayPhone() !== '—')
+                            <a href="tel:{{ $order->displayPhone() }}" style="color:#1d4ed8; text-decoration:none;">{{ $order->displayPhone() }}</a>
+                        @else
+                            <span style="color:#9ca3af;">—</span>
+                        @endif
+                    </div>
+                </div>
+                <div style="grid-column: 1 / -1;">
+                    <div style="font-size:12px; color:#6b7280; font-weight:600; margin-bottom:4px;">العنوان</div>
+                    <div style="font-weight:700; color:#374151; line-height:1.6;">{{ $order->displayAddress() }}</div>
+                </div>
+                <div>
+                    <div style="font-size:12px; color:#6b7280; font-weight:600; margin-bottom:4px;">الحالة الحالية</div>
+                    @php
+                        $statusStyle = match ($order->status) {
+                            'طلب جديد' => 'background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe;',
+                            'تم التأكيد' => 'background:#f0fdf4; color:#15803d; border:1px solid #bbf7d0;',
+                            'قيد التجهيز' => 'background:#fffbeb; color:#92400e; border:1px solid #fcd34d;',
+                            'خرج للتوصيل' => 'background:#faf5ff; color:#7e22ce; border:1px solid #e9d5ff;',
+                            'مكتمل' => 'background:#ecfdf5; color:#047857; border:1px solid #a7f3d0;',
+                            'ملغي' => 'background:#fff1f2; color:#b91c1c; border:1px solid #fecaca;',
+                            default => 'background:#f3f4f6; color:#374151; border:1px solid #e5e7eb;',
+                        };
+                    @endphp
+                    <span style="display:inline-block; padding:5px 12px; border-radius:20px; font-size:13px; font-weight:800; {{ $statusStyle }}">
+                        {{ $order->status }}
+                    </span>
+                </div>
+                <div>
+                    <div style="font-size:12px; color:#6b7280; font-weight:600; margin-bottom:4px;">تاريخ تغيير الحالة</div>
+                    <div style="font-weight:800; color:#111827;">
+                        {{ $order->status_changed_at?->format('d/m/Y h:i A') ?? $order->updated_at?->format('d/m/Y h:i A') ?? '—' }}
+                    </div>
+                    @if ($order->status_changed_at)
+                        <div style="font-size:12px; color:#6b7280; font-weight:600; margin-top:2px;">
+                            {{ $order->status_changed_at->diffForHumans() }}
+                        </div>
+                    @endif
+                </div>
+                <div>
+                    <div style="font-size:12px; color:#6b7280; font-weight:600; margin-bottom:4px;">تاريخ إنشاء الطلب</div>
+                    <div style="font-weight:800; color:#111827;">
+                        {{ $order->created_at?->format('d/m/Y h:i A') ?? '—' }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <form method="POST" action="{{ route('orders.update', $order) }}">
             @csrf
             @method('PUT')
 
+            <input type="hidden" name="remote_jid" value="{{ old('remote_jid', $order->remote_jid) }}">
+
             <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 14px;">
-                <div style="grid-column: 1 / -1;">
-                    <label style="display:block; margin-bottom:6px; font-weight:700;">remoteJid</label>
-                    <input name="remote_jid" type="text" value="{{ old('remote_jid', $order->remote_jid) }}"
-                           placeholder="مثال: 96550000000@s.whatsapp.net"
-                           style="width:100%; border:1px solid #d1d5db; border-radius:8px; padding:10px; font-family:monospace; font-size:14px; direction:ltr;">
-                </div>
                 <div>
                     <label style="display:block; margin-bottom:6px; font-weight:700;">حالة الطلب</label>
                     <select name="status" style="width:100%; border:1px solid #d1d5db; border-radius:8px; padding:10px; font-family:inherit;" required>
@@ -64,11 +118,10 @@
                 <label for="notify_customer" style="cursor:pointer; line-height:1.5;">
                     <span style="font-weight:800; color:#15803d; font-size:14px;">📲 إرسال إشعار واتساب للعميل</span>
                     <div style="font-size:12px; color:#4b5563; margin-top:3px;">
-                        سيتم إرسال رسالة على الـ remoteJid بحالة الطلب الجديدة
-                        @if($order->remote_jid)
-                            — <span style="font-family:monospace; direction:ltr; display:inline-block;">{{ $order->remote_jid }}</span>
+                        @if ($order->remote_jid)
+                            سيتم إرسال رسالة واتساب للعميل بحالة الطلب الجديدة
                         @else
-                            <span style="color:#ef4444;">(لا يوجد remoteJid مرتبط بهذا الطلب)</span>
+                            <span style="color:#ef4444;">لا يمكن الإرسال — لا يوجد رقم واتساب مرتبط بهذا الطلب</span>
                         @endif
                     </div>
                 </label>

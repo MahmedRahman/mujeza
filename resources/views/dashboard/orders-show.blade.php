@@ -127,12 +127,6 @@
                         <div style="font-size:12px; color:#6b7280; font-weight:600;">العنوان</div>
                         <div style="font-weight:700; color:#374151; line-height:1.6;">{{ $order->displayAddress() }}</div>
                     </div>
-                    @if ($order->remote_jid)
-                        <div>
-                            <div style="font-size:12px; color:#6b7280; font-weight:600;">واتساب</div>
-                            <div style="font-family:monospace; font-size:13px; direction:ltr; text-align:right; color:#4b5563;">{{ $order->remote_jid }}</div>
-                        </div>
-                    @endif
                 </div>
             </div>
 
