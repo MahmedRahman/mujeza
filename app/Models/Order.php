@@ -120,4 +120,76 @@ class Order extends Model
 
         return $index === false ? -1 : (int) $index;
     }
+
+    /**
+     * تحليل items_text للعرض في قسم «ملاحظات» (نص عادي أو JSON من واتساب/API).
+     *
+     * @return array{
+     *     format: 'text'|'json',
+     *     text: string|null,
+     *     items: array<int, array{product: string, quantity: int}>,
+     *     meta: array<string, string>
+     * }|null
+     */
+    public function parsedItemsNotes(): ?array
+    {
+        $raw = trim((string) ($this->items_text ?? ''));
+        if ($raw === '') {
+            return null;
+        }
+
+        $data = json_decode($raw, true);
+        if (! is_array($data) || json_last_error() !== JSON_ERROR_NONE) {
+            return [
+                'format' => 'text',
+                'text'   => $raw,
+                'items'  => [],
+                'meta'   => [],
+            ];
+        }
+
+        $items = [];
+        foreach ($data['items'] ?? [] as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+
+            $product = trim((string) ($row['product'] ?? $row['product_title'] ?? $row['title'] ?? $row['name'] ?? ''));
+            if ($product === '') {
+                continue;
+            }
+
+            $items[] = [
+                'product'  => $product,
+                'quantity' => max(1, (int) ($row['quantity'] ?? 1)),
+            ];
+        }
+
+        $meta = [];
+        $map  = [
+            'name'             => 'الاسم',
+            'customer_name'    => 'الاسم',
+            'phone'            => 'الهاتف',
+            'address'          => 'العنوان',
+            'delivery_address' => 'العنوان',
+        ];
+
+        foreach ($map as $key => $label) {
+            if (! isset($data[$key]) || ! is_scalar($data[$key])) {
+                continue;
+            }
+
+            $value = trim((string) $data[$key]);
+            if ($value !== '' && ! isset($meta[$label])) {
+                $meta[$label] = $value;
+            }
+        }
+
+        return [
+            'format' => 'json',
+            'text'   => null,
+            'items'  => $items,
+            'meta'   => $meta,
+        ];
+    }
 }

@@ -602,7 +602,7 @@ class AuthController extends Controller
             });
         }
 
-        $orders = $ordersQuery->with('items')->latest()->get();
+        $orders = $ordersQuery->latest()->get();
 
         return view('dashboard.orders', [
             'orders'       => $orders,
@@ -1977,8 +1977,12 @@ class AuthController extends Controller
 
     public function storeProduct(Request $request): RedirectResponse
     {
+        $request->merge([
+            'title' => $this->normalizeProductTitle((string) $request->input('title', '')),
+        ]);
+
         $validated = $request->validate([
-            'title' => ['required', 'string', 'max:255'],
+            'title' => $this->productTitleRules(),
             'price' => ['required', 'numeric', 'min:0'],
             'discount_price' => ['nullable', 'numeric', 'min:0', 'lte:price'],
             'is_available' => ['sometimes', 'boolean'],
@@ -1996,7 +2000,7 @@ class AuthController extends Controller
             'product_images' => ['nullable', 'array'],
             'product_images.*' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
             'primary_image_index' => ['nullable', 'integer', 'min:0'],
-        ]);
+        ], $this->productValidationMessages());
 
         $productImages = [];
         if ($request->hasFile('product_images')) {
@@ -2037,8 +2041,12 @@ class AuthController extends Controller
 
     public function updateProduct(Request $request, Product $product): RedirectResponse
     {
+        $request->merge([
+            'title' => $this->normalizeProductTitle((string) $request->input('title', '')),
+        ]);
+
         $validated = $request->validate([
-            'title' => ['required', 'string', 'max:255'],
+            'title' => $this->productTitleRules($product->id),
             'price' => ['required', 'numeric', 'min:0'],
             'discount_price' => ['nullable', 'numeric', 'min:0', 'lte:price'],
             'is_available' => ['sometimes', 'boolean'],
@@ -2058,7 +2066,7 @@ class AuthController extends Controller
             'primary_image_index' => ['nullable', 'integer', 'min:0'],
             'category_ids' => ['nullable', 'array'],
             'category_ids.*' => ['integer', 'exists:categories,id'],
-        ]);
+        ], $this->productValidationMessages());
 
         $galleryImages = $product->gallery_images ?? [];
         $primaryGalleryImage = $product->primary_gallery_image;
@@ -2999,6 +3007,35 @@ class AuthController extends Controller
         $request->session()->regenerateToken();
 
         return redirect()->route('login');
+    }
+
+    private function normalizeProductTitle(string $title): string
+    {
+        return trim(preg_replace('/\s+/u', ' ', $title) ?? $title);
+    }
+
+    /**
+     * @return array<int, mixed>
+     */
+    private function productTitleRules(?int $ignoreProductId = null): array
+    {
+        $unique = Rule::unique('products', 'title');
+        if ($ignoreProductId !== null) {
+            $unique = $unique->ignore($ignoreProductId);
+        }
+
+        return ['required', 'string', 'max:255', $unique];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function productValidationMessages(): array
+    {
+        return [
+            'title.required' => 'عنوان المنتج مطلوب.',
+            'title.unique'   => 'عنوان المنتج موجود مسبقاً. استخدم عنواناً مختلفاً.',
+        ];
     }
 
     private function parseArray(array $values): array

@@ -192,16 +192,10 @@
                     </tbody>
                 </table>
             </div>
-        @elseif (!empty($order->items_text))
-            <div style="border:1px solid #fcd34d; border-radius:10px; padding:14px; background:#fffbeb; margin-bottom:16px;">
-                <div style="font-weight:800; margin-bottom:8px; color:#92400e; font-size:13px;">منتجات مسجّلة كنص فقط (غير مربوطة بـ ID)</div>
-                <div style="white-space:pre-wrap; line-height:1.8; font-weight:600; color:#374151;">{{ $order->items_text }}</div>
-                <p style="margin:10px 0 0; font-size:12px; color:#6b7280; font-weight:600;">
-                    اختر المنتجات بالـ ID أدناه لربطها بهذا الطلب.
-                </p>
-            </div>
+        @elseif ($order->parsedItemsNotes())
+            @include('dashboard.partials.order-notes')
         @else
-            <p style="color:#6b7280; margin:0 0 16px; font-weight:600;">لا توجد منتجات مربوطة بعد — أضفها من النموذج أدناه.</p>
+            <p style="color:#6b7280; margin:0 0 16px; font-weight:600;">لا توجد منتجات مربوطة بعد.</p>
         @endif
 
         @if ($errors->any())
@@ -217,6 +211,9 @@
         <form method="POST" action="{{ route('orders.items', $order) }}">
             @csrf
             @method('PUT')
+            <p style="margin:0 0 10px; font-size:13px; color:#6b7280; font-weight:600;">
+                اختر المنتجات بالـ ID لربطها بالطلب وحساب الإجمالي.
+            </p>
             @include('dashboard.partials.order-items-form', ['order' => $order])
             <div style="margin-top:12px;">
                 <button type="submit" style="border:none; background:#d4af37; color:#111827; padding:10px 18px; border-radius:8px; font-weight:800; font-family:inherit; cursor:pointer;">

@@ -58,11 +58,8 @@
             </div>
         </div>
 
-        @if (!empty($order->items_text))
-            <div style="border:1px solid #efe3b7; border-radius:10px; padding:12px; background:#fffcf2; margin-bottom: 14px;">
-                <div style="font-weight:800; margin-bottom:6px;">العناصر المطلوبة</div>
-                <div style="color:#374151; font-weight:700; white-space: pre-wrap;">{{ $order->items_text }}</div>
-            </div>
+        @if ($order->parsedItemsNotes())
+            @include('dashboard.partials.order-notes')
         @endif
 
         @if ($order->items->isEmpty())
