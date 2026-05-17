@@ -71,6 +71,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/complaints', [AuthController::class, 'storeComplaint'])->name('complaints.store');
     Route::get('/complaints/{complaint}/edit', [AuthController::class, 'editComplaint'])->name('complaints.edit');
     Route::put('/complaints/{complaint}', [AuthController::class, 'updateComplaint'])->name('complaints.update');
+    Route::delete('/complaints/all', [AuthController::class, 'destroyAllComplaints'])->name('complaints.destroy-all');
     Route::delete('/complaints/{complaint}', [AuthController::class, 'destroyComplaint'])->name('complaints.destroy');
 
     Route::get('/faqs', [AuthController::class, 'faqs'])->name('faqs.index');

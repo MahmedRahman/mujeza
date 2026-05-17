@@ -1065,26 +1065,52 @@ class AuthController extends Controller
 
     public function complaints(Request $request): View
     {
-        $q = trim((string) $request->query('q'));
+        $customerName = trim((string) $request->query('customer_name', ''));
+        $phone        = trim((string) $request->query('phone', ''));
+        $complaintId  = trim((string) $request->query('complaint_id', ''));
 
-        $complaintsQuery = Complaint::query();
-        if ($q !== '') {
-            $complaintsQuery->where(function ($builder) use ($q) {
-                $builder->where('remote_jid', 'like', '%'.$q.'%')
-                    ->orWhere('title', 'like', '%'.$q.'%')
-                    ->orWhere('description', 'like', '%'.$q.'%');
+        $complaintsQuery = Complaint::query()->with('customer');
+
+        if ($complaintId !== '' && ctype_digit($complaintId)) {
+            $complaintsQuery->where('id', (int) $complaintId);
+        }
+
+        if ($customerName !== '') {
+            $complaintsQuery->whereHas('customer', function ($query) use ($customerName) {
+                $query->where('name', 'like', '%'.$customerName.'%');
             });
         }
 
-        $complaints = $complaintsQuery->with('customer')->latest()->get();
+        if ($phone !== '') {
+            $digits = preg_replace('/\D+/', '', $phone) ?? '';
+            $complaintsQuery->where(function ($builder) use ($phone, $digits) {
+                $builder->where('remote_jid', 'like', '%'.$phone.'%');
+                if ($digits !== '') {
+                    $builder->orWhere('remote_jid', 'like', '%'.$digits.'%');
+                }
+                $builder->orWhereHas('customer', function ($query) use ($phone, $digits) {
+                    $query->where('phone', 'like', '%'.$phone.'%');
+                    if ($digits !== '') {
+                        $query->orWhere('phone', 'like', '%'.$digits.'%')
+                            ->orWhere('remote_jid', 'like', '%'.$digits.'%');
+                    }
+                });
+            });
+        }
+
+        $complaints = $complaintsQuery->latest()->get();
 
         return view('dashboard.complaints', [
-            'complaints'      => $complaints,
-            'q'               => $q,
-            'complaintsStats' => [
-                'total'    => Complaint::query()->count(),
-                'today'    => Complaint::query()->whereDate('created_at', now()->toDateString())->count(),
-                'last7days'=> Complaint::query()->where('created_at', '>=', now()->subDays(7))->count(),
+            'complaints'          => $complaints,
+            'customerName'        => $customerName,
+            'phone'               => $phone,
+            'complaintId'         => $complaintId,
+            'hasFilters'          => $customerName !== '' || $phone !== '' || $complaintId !== '',
+            'totalComplaintsCount'=> Complaint::query()->count(),
+            'complaintsStats'     => [
+                'total'     => Complaint::query()->count(),
+                'today'     => Complaint::query()->whereDate('created_at', now()->toDateString())->count(),
+                'last7days' => Complaint::query()->where('created_at', '>=', now()->subDays(7))->count(),
             ],
         ]);
     }
@@ -1172,6 +1198,23 @@ class AuthController extends Controller
         return redirect()
             ->route('complaints.index')
             ->with('success', 'تم حذف الشكوى/الاستفسار بنجاح.');
+    }
+
+    public function destroyAllComplaints(): RedirectResponse
+    {
+        $count = Complaint::query()->count();
+
+        if ($count === 0) {
+            return redirect()
+                ->route('complaints.index')
+                ->with('success', 'لا توجد شكاوى للحذف.');
+        }
+
+        Complaint::query()->delete();
+
+        return redirect()
+            ->route('complaints.index')
+            ->with('success', 'تم حذف جميع الشكاوى بنجاح.');
     }
 
     #[OA\Get(

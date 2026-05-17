@@ -16,9 +16,65 @@
             </div>
         @endif
 
-        <a href="{{ route('complaints.create') }}" style="display:inline-block; margin-bottom: 14px; text-decoration:none; border:none; background:#d4af37; color:#111827; padding:10px 18px; border-radius:8px; font-weight:700;">
-            + إضافة شكوى
-        </a>
+        <div style="display:flex; gap:12px; align-items:center; margin-bottom:14px; flex-wrap:wrap;">
+            <a href="{{ route('complaints.create') }}" style="display:inline-block; text-decoration:none; border:none; background:#d4af37; color:#111827; padding:10px 18px; border-radius:8px; font-weight:700;">
+                + إضافة شكوى
+            </a>
+            @if (($totalComplaintsCount ?? 0) > 0)
+                <form method="POST" action="{{ route('complaints.destroy-all') }}" onsubmit="return confirm('هل أنت متأكد من حذف جميع الشكاوى في النظام؟\n\nسيتم حذف {{ $totalComplaintsCount }} شكوى نهائياً ولا يمكن التراجع عن هذا الإجراء.')">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" style="border:1px solid #fecaca; background:#fff1f2; color:#b91c1c; padding:10px 18px; border-radius:8px; font-weight:800; font-family:inherit; cursor:pointer;">
+                        حذف كل الشكاوى
+                    </button>
+                </form>
+            @endif
+        </div>
+
+        <form method="GET" action="{{ route('complaints.index') }}" style="margin-bottom:20px; display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+            <div>
+                <label for="complaint_id" style="display:block; font-size:13px; font-weight:700; color:#374151; margin-bottom:6px;">رقم الشكوى</label>
+                <input
+                    id="complaint_id"
+                    name="complaint_id"
+                    type="text"
+                    inputmode="numeric"
+                    value="{{ $complaintId ?? '' }}"
+                    placeholder="مثال: 15"
+                    style="width:140px; max-width:100%; border:1px solid #d1d5db; border-radius:8px; padding:10px; font-family:inherit;"
+                >
+            </div>
+            <div>
+                <label for="customer_name" style="display:block; font-size:13px; font-weight:700; color:#374151; margin-bottom:6px;">اسم العميل</label>
+                <input
+                    id="customer_name"
+                    name="customer_name"
+                    type="text"
+                    value="{{ $customerName ?? '' }}"
+                    placeholder="مثال: محمد أحمد"
+                    style="width:220px; max-width:100%; border:1px solid #d1d5db; border-radius:8px; padding:10px; font-family:inherit;"
+                >
+            </div>
+            <div>
+                <label for="phone" style="display:block; font-size:13px; font-weight:700; color:#374151; margin-bottom:6px;">رقم التليفون</label>
+                <input
+                    id="phone"
+                    name="phone"
+                    type="text"
+                    value="{{ $phone ?? '' }}"
+                    placeholder="مثال: 96550000000"
+                    style="width:200px; max-width:100%; border:1px solid #d1d5db; border-radius:8px; padding:10px; font-family:inherit;"
+                >
+            </div>
+            <button type="submit" style="border:none; background:#d4af37; color:#111827; padding:10px 18px; border-radius:8px; font-weight:800; font-family:inherit; cursor:pointer;">
+                بحث
+            </button>
+            @if ($hasFilters ?? false)
+                <a href="{{ route('complaints.index') }}" style="display:inline-block; text-decoration:none; border:1px solid #d1d5db; background:#fff; color:#111827; padding:10px 14px; border-radius:8px; font-weight:800;">
+                    إلغاء البحث
+                </a>
+            @endif
+        </form>
 
         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin: 4px 0 14px;">
             <div style="border:1px solid #efe3b7; border-radius:10px; padding:14px; background:#fffcf2;">
@@ -36,12 +92,19 @@
         </div>
 
         @if ($complaints->isEmpty())
-            <p style="margin:0; color:#6b7280;">لا توجد شكاوى بعد.</p>
+            <p style="margin:0; color:#6b7280;">
+                @if ($hasFilters ?? false)
+                    لا توجد شكاوى مطابقة لبحثك.
+                @else
+                    لا توجد شكاوى بعد.
+                @endif
+            </p>
         @else
             <div style="overflow-x: auto;">
-                <table style="width: 100%; border-collapse: collapse; min-width: 700px;">
+                <table style="width: 100%; border-collapse: collapse; min-width: 900px;">
                     <thead>
                         <tr style="background: #f8f2de;">
+                            <th style="padding: 10px; border: 1px solid #efe3b7; text-align: right;">رقم الشكوى</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align: right; white-space:nowrap;">تاريخ الإدخال</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align: right;">remoteJid</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align: right;">الاسم</th>
@@ -55,6 +118,9 @@
                     <tbody>
                         @foreach ($complaints as $complaint)
                             <tr>
+                                <td style="padding: 10px; border: 1px solid #efe3b7; font-weight:900; color:#92400e; white-space:nowrap;">
+                                    #{{ $complaint->id }}
+                                </td>
                                 <td style="padding: 10px; border: 1px solid #efe3b7; font-weight:700; white-space:nowrap; color:#6b7280; font-size:13px;">
                                     {{ $complaint->created_at?->format('d/m/Y') ?? '—' }}
                                     <div style="font-size:11px; color:#9ca3af;">{{ $complaint->created_at?->diffForHumans() ?? '' }}</div>
@@ -115,7 +181,7 @@
                                             تعديل
                                         </a>
                                         <form action="{{ route('complaints.destroy', $complaint) }}" method="POST"
-                                              onsubmit="return confirm('هل أنت متأكد من حذف هذه الشكوى؟');">
+                                              onsubmit="return confirm('هل أنت متأكد من حذف الشكوى رقم #{{ $complaint->id }}؟');">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit"
