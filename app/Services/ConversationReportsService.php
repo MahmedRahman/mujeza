@@ -40,8 +40,11 @@ class ConversationReportsService
             ];
         }
 
-        /** @var Collection<int, array<string, mixed>> $chats */
-        $chats  = $fetch['chats'];
+        $chats = $fetch['chats'];
+        if (! $chats instanceof Collection) {
+            $chats = collect(is_array($chats) ? $chats : []);
+        }
+
         $fromTs = $period['from']->timestamp;
 
         return [

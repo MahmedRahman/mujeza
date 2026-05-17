@@ -602,7 +602,7 @@ class AuthController extends Controller
             });
         }
 
-        $orders = $ordersQuery->latest()->get();
+        $orders = $ordersQuery->with('items')->latest()->get();
 
         return view('dashboard.orders', [
             'orders'       => $orders,
@@ -619,12 +619,14 @@ class AuthController extends Controller
         return view('dashboard.orders-create', [
             'statuses'  => Order::STATUSES,
             'customers' => $customers,
+            'products'  => $this->orderProductsForForm(),
         ]);
     }
 
     public function editOrder(Order $order): View
     {
         $order->load([
+            'items',
             'customer',
             'statusHistories' => fn ($query) => $query->orderBy('created_at'),
         ]);
@@ -632,6 +634,7 @@ class AuthController extends Controller
         return view('dashboard.orders-edit', [
             'order'    => $order,
             'statuses' => Order::STATUSES,
+            'products' => $this->orderProductsForForm(),
         ]);
     }
 
@@ -640,8 +643,10 @@ class AuthController extends Controller
         $validated = $request->validate([
             'remote_jid'       => ['nullable', 'string', 'max:255'],
             'delivery_address' => ['nullable', 'string', 'max:2000'],
-            'items'            => ['required', 'string', 'max:5000'],
             'status'           => ['required', 'string', Rule::in(Order::STATUSES)],
+            'items'            => ['required', 'array', 'min:1'],
+            'items.*.product_id' => ['required', 'integer', 'exists:products,id'],
+            'items.*.quantity'   => ['required', 'integer', 'min:1', 'max:9999'],
         ]);
 
         $orderNumber = (int) (Order::query()->max('order_number') ?? 0) + 1;
@@ -655,13 +660,14 @@ class AuthController extends Controller
             'customer_name'    => $customer?->name,
             'phone'            => $customer?->phone,
             'delivery_address' => trim((string) ($validated['delivery_address'] ?? '')),
-            'items_text'       => trim((string) $validated['items']),
+            'items_text'       => '',
             'status'           => $validated['status'],
             'status_changed_at'=> now(),
             'total_amount'     => 0,
             'delivery_fee'     => 0,
         ]);
 
+        $this->syncOrderLineItems($order, $validated['items']);
         $this->recordOrderStatusChange($order, $validated['status'], 'إنشاء الطلب');
 
         return redirect()
@@ -676,6 +682,9 @@ class AuthController extends Controller
             'delivery_address' => ['nullable', 'string', 'max:2000'],
             'status'           => ['required', 'string', Rule::in(Order::STATUSES)],
             'notify_customer'  => ['nullable', 'boolean'],
+            'items'            => ['required', 'array', 'min:1'],
+            'items.*.product_id' => ['required', 'integer', 'exists:products,id'],
+            'items.*.quantity'   => ['required', 'integer', 'min:1', 'max:9999'],
         ]);
 
         $remoteJid  = trim((string) ($validated['remote_jid'] ?? ''));
@@ -695,6 +704,8 @@ class AuthController extends Controller
         if ($oldStatus !== $newStatus) {
             $this->recordOrderStatusChange($order, $newStatus, 'تعديل من صفحة التعديل');
         }
+
+        $this->syncOrderLineItems($order, $validated['items']);
 
         $shouldNotify = (bool) ($validated['notify_customer'] ?? false);
 
@@ -780,6 +791,154 @@ class AuthController extends Controller
         ]);
     }
 
+    /**
+     * @return \Illuminate\Database\Eloquent\Collection<int, Product>
+     */
+    private function orderProductsForForm()
+    {
+        return Product::query()
+            ->orderBy('title')
+            ->get(['id', 'title', 'price', 'discount_price', 'is_available']);
+    }
+
+    /**
+     * @return array<int, array{product_id: int, quantity: int}>
+     */
+    private function resolveApiOrderLineItems(Request $request, bool $required = true): array
+    {
+        if ($required) {
+            $request->validate([
+                'items_id'  => ['required'],
+                'items_qty' => ['required'],
+            ]);
+        } elseif (! $request->has('items_id') && ! $request->has('items_qty')) {
+            return [];
+        } elseif ($request->has('items_id') xor $request->has('items_qty')) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'items_id' => 'يجب إرسال items_id و items_qty معاً.',
+            ]);
+        }
+
+        $ids  = $this->parseOrderItemsCsv($request->input('items_id'));
+        $qtys = $this->parseOrderItemsCsv($request->input('items_qty'));
+
+        if ($ids === [] || $qtys === []) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'items_id' => 'items_id و items_qty لا يمكن أن يكونا فارغين.',
+            ]);
+        }
+
+        if (count($ids) !== count($qtys)) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'items_qty' => 'عدد عناصر items_qty ('.count($qtys).') يجب أن يطابق items_id ('.count($ids).').',
+            ]);
+        }
+
+        $items = [];
+
+        foreach ($ids as $index => $productId) {
+            $quantity = (int) ($qtys[$index] ?? 1);
+
+            if ($quantity < 1 || $quantity > 9999) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'items_qty' => 'الكمية في الموضع '.($index + 1).' يجب أن تكون بين 1 و 9999.',
+                ]);
+            }
+
+            if (! Product::query()->whereKey($productId)->exists()) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'items_id' => 'معرّف المنتج '.$productId.' غير موجود.',
+                ]);
+            }
+
+            $items[] = [
+                'product_id' => $productId,
+                'quantity'   => $quantity,
+            ];
+        }
+
+        return $items;
+    }
+
+    /**
+     * @return list<int>
+     */
+    private function parseOrderItemsCsv(mixed $value): array
+    {
+        if (is_array($value)) {
+            return array_values(array_filter(
+                array_map(fn ($part) => (int) $part, $value),
+                fn (int $id) => $id > 0
+            ));
+        }
+
+        $string = trim((string) $value);
+        if ($string === '') {
+            return [];
+        }
+
+        return array_values(array_filter(
+            array_map(fn (string $part) => (int) trim($part), explode(',', $string)),
+            fn (int $id) => $id > 0
+        ));
+    }
+
+    /**
+     * @param  array<int, array{product_id?: mixed, quantity?: mixed}>  $rawItems
+     */
+    private function syncOrderLineItems(Order $order, array $rawItems): void
+    {
+        OrderItem::query()->where('order_id', $order->id)->delete();
+
+        $productIds = collect($rawItems)
+            ->pluck('product_id')
+            ->filter(fn ($id) => $id !== null && $id !== '')
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        if ($productIds->isEmpty()) {
+            $order->update(['items_text' => '', 'total_amount' => 0]);
+
+            return;
+        }
+
+        $products = Product::query()->whereIn('id', $productIds)->get()->keyBy('id');
+
+        $subtotal  = 0.0;
+        $textParts = [];
+
+        foreach ($rawItems as $row) {
+            $productId = (int) ($row['product_id'] ?? 0);
+            $quantity  = max(1, (int) ($row['quantity'] ?? 1));
+            $product   = $products->get($productId);
+
+            if (! $product) {
+                continue;
+            }
+
+            $unitPrice = (float) ($product->discount_price ?: $product->price);
+            $lineTotal = round($unitPrice * $quantity, 2);
+
+            OrderItem::query()->create([
+                'order_id'       => $order->id,
+                'product_id'     => $product->id,
+                'product_title'  => $product->title,
+                'unit_price'     => $unitPrice,
+                'quantity'       => $quantity,
+                'line_total'     => $lineTotal,
+            ]);
+
+            $subtotal += $lineTotal;
+            $textParts[] = '#'.$product->id.' '.$product->title.' x'.$quantity;
+        }
+
+        $order->update([
+            'items_text'   => implode(' + ', $textParts),
+            'total_amount' => round($subtotal, 2),
+        ]);
+    }
+
     private function applyPhoneFilterToOrdersQuery($query, string $phone): void
     {
         $digits = preg_replace('/\D+/', '', $phone) ?? '';
@@ -854,7 +1013,23 @@ class AuthController extends Controller
         return view('dashboard.orders-show', [
             'order'    => $order,
             'statuses' => Order::STATUSES,
+            'products' => $this->orderProductsForForm(),
         ]);
+    }
+
+    public function updateOrderItems(Request $request, Order $order): RedirectResponse
+    {
+        $validated = $request->validate([
+            'items'              => ['required', 'array', 'min:1'],
+            'items.*.product_id' => ['required', 'integer', 'exists:products,id'],
+            'items.*.quantity'   => ['required', 'integer', 'min:1', 'max:9999'],
+        ]);
+
+        $this->syncOrderLineItems($order, $validated['items']);
+
+        return redirect()
+            ->route('orders.show', $order)
+            ->with('success', 'تم تحديث منتجات الطلب بنجاح.');
     }
 
     public function invoiceOrder(Order $order): View
@@ -1370,21 +1545,10 @@ class AuthController extends Controller
         operationId: 'storeOrder',
         tags: ['Orders'],
         summary: 'Create order',
-        description: 'Creates a new order. The items field must be a single text value describing requested products. Pass remote_jid to auto-fill customer name and phone from the customers table.',
+        description: 'إنشاء طلب جديد. المنتجات عبر items_id و items_qty (نص مفصول بفواصل أو مصفوفة). مثال: items_id=12,5,8 و items_qty=2,1,4',
         requestBody: new OA\RequestBody(
             required: true,
-            content: new OA\JsonContent(
-                required: ['items'],
-                properties: [
-                    new OA\Property(property: 'remote_jid', type: 'string', example: '96550000000@s.whatsapp.net', nullable: true),
-                    new OA\Property(property: 'customer_name', type: 'string', example: 'محمد أحمد', nullable: true),
-                    new OA\Property(property: 'phone', type: 'string', example: '96550000000', nullable: true),
-                    new OA\Property(property: 'delivery_address', type: 'string', example: 'الكويت - حولي - شارع بيروت - قطعة 4 - منزل 12', nullable: true),
-                    new OA\Property(property: 'delivery_fee', type: 'number', example: 1.5, nullable: true),
-                    new OA\Property(property: 'status', ref: '#/components/schemas/OrderStatus'),
-                    new OA\Property(property: 'items', type: 'string', example: 'عسل سدر 2 عبوة + عسل كشميري 1 عبوة'),
-                ]
-            )
+            content: new OA\JsonContent(ref: '#/components/schemas/OrderCreateRequest')
         ),
         responses: [
             new OA\Response(
@@ -1401,15 +1565,7 @@ class AuthController extends Controller
     )]
     public function apiStoreOrder(Request $request): JsonResponse
     {
-        if (is_array($request->input('items'))) {
-            return response()->json([
-                'success' => false,
-                'message' => 'حقل items لازم يكون نص واحد وليس list/array.',
-                'example' => [
-                    'items' => 'عسل سدر 2 عبوة + عسل كشميري 1 عبوة',
-                ],
-            ], 422);
-        }
+        $lineItems = $this->resolveApiOrderLineItems($request, required: true);
 
         $validated = $request->validate([
             'remote_jid'       => ['nullable', 'string', 'max:255'],
@@ -1418,10 +1574,9 @@ class AuthController extends Controller
             'delivery_address' => ['nullable', 'string', 'max:2000'],
             'delivery_fee'     => ['nullable', 'numeric', 'min:0'],
             'status'           => ['nullable', 'string', Rule::in(Order::STATUSES)],
-            'items'            => ['required', 'string', 'max:5000'],
         ]);
 
-        $order = DB::transaction(function () use ($validated) {
+        $order = DB::transaction(function () use ($validated, $lineItems) {
             $orderNumber = (int) (Order::query()->max('order_number') ?? 0) + 1;
             $remoteJid   = trim((string) ($validated['remote_jid'] ?? ''));
             $customer    = $remoteJid ? Customer::query()->where('remote_jid', $remoteJid)->first() : null;
@@ -1438,13 +1593,14 @@ class AuthController extends Controller
                 'customer_name'     => trim((string) ($validated['customer_name'] ?? '')) ?: $customer?->name,
                 'phone'             => trim((string) ($validated['phone'] ?? '')) ?: $customer?->phone,
                 'delivery_address'  => $deliveryAddress,
-                'items_text'        => trim((string) $validated['items']),
+                'items_text'        => '',
                 'status'            => $status,
                 'status_changed_at' => now(),
                 'total_amount'      => 0,
                 'delivery_fee'      => (float) ($validated['delivery_fee'] ?? 0),
             ]);
 
+            $this->syncOrderLineItems($order, $lineItems);
             $this->recordOrderStatusChange($order, $status, 'إنشاء الطلب عبر API', 'api');
 
             return $order;
@@ -1510,6 +1666,7 @@ class AuthController extends Controller
         operationId: 'updateOrder',
         tags: ['Orders'],
         summary: 'Update order',
+        description: 'تحديث الطلب. عند إرسال items_id و items_qty تُستبدل المنتجات المربوطة بالكامل (مثال: items_id=12,5 و items_qty=2,1).',
         parameters: [
             new OA\Parameter(
                 name: 'order_number',
@@ -1519,15 +1676,7 @@ class AuthController extends Controller
             ),
         ],
         requestBody: new OA\RequestBody(
-            content: new OA\JsonContent(
-                properties: [
-                    new OA\Property(property: 'status', ref: '#/components/schemas/OrderStatus'),
-                    new OA\Property(property: 'delivery_address', type: 'string', nullable: true),
-                    new OA\Property(property: 'delivery_fee', type: 'number', example: 1.5),
-                    new OA\Property(property: 'items', type: 'string', nullable: true, description: 'Single text describing requested products (not an array)'),
-                    new OA\Property(property: 'status_note', type: 'string', nullable: true, description: 'Note recorded in status history when status changes'),
-                ]
-            )
+            content: new OA\JsonContent(ref: '#/components/schemas/OrderUpdateRequest')
         ),
         responses: [
             new OA\Response(
@@ -1558,24 +1707,18 @@ class AuthController extends Controller
             ], 404);
         }
 
-        if ($request->has('items') && is_array($request->input('items'))) {
-            return response()->json([
-                'success' => false,
-                'message' => 'حقل items لازم يكون نص واحد وليس list/array.',
-            ], 422);
-        }
+        $lineItems = $this->resolveApiOrderLineItems($request, required: false);
 
         $validated = $request->validate([
             'status'           => ['sometimes', 'string', Rule::in(Order::STATUSES)],
             'delivery_address' => ['sometimes', 'nullable', 'string', 'max:2000'],
             'delivery_fee'     => ['sometimes', 'nullable', 'numeric', 'min:0'],
-            'items'            => ['sometimes', 'string', 'max:5000'],
             'status_note'      => ['sometimes', 'nullable', 'string', 'max:500'],
         ]);
 
         $oldStatus = $order->status;
 
-        DB::transaction(function () use ($order, $validated, $oldStatus) {
+        DB::transaction(function () use ($order, $validated, $oldStatus, $lineItems) {
             $updates = [];
 
             if (array_key_exists('delivery_address', $validated)) {
@@ -1584,10 +1727,6 @@ class AuthController extends Controller
 
             if (array_key_exists('delivery_fee', $validated)) {
                 $updates['delivery_fee'] = (float) ($validated['delivery_fee'] ?? 0);
-            }
-
-            if (array_key_exists('items', $validated)) {
-                $updates['items_text'] = trim((string) $validated['items']);
             }
 
             if (array_key_exists('status', $validated)) {
@@ -1610,6 +1749,10 @@ class AuthController extends Controller
                     trim((string) ($validated['status_note'] ?? '')) ?: 'تحديث الحالة عبر API',
                     'api'
                 );
+            }
+
+            if ($lineItems !== []) {
+                $this->syncOrderLineItems($order, $lineItems);
             }
         });
 

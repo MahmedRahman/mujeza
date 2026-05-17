@@ -62,6 +62,7 @@
                 <table style="width: 100%; border-collapse: collapse; min-width: 860px;">
                     <thead>
                         <tr style="background: #f8f2de;">
+                            <th style="padding: 10px; border: 1px solid #efe3b7; text-align: right; width: 60px;">ID</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align: right;">المنتج</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align: right;">السعر</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align: right;">سعر الخصم</th>
@@ -73,6 +74,7 @@
                     <tbody>
                         @foreach ($products as $product)
                             <tr>
+                                <td style="padding: 10px; border: 1px solid #efe3b7; font-weight: 900; color: #92400e;">{{ $product->id }}</td>
                                 <td style="padding: 10px; border: 1px solid #efe3b7; font-weight: 700;">
                                     {{ $product->title }}
                                     <div style="margin-top:6px; font-size:12px; font-weight:900; color: {{ $product->is_available ? '#166534' : '#b91c1c' }};">

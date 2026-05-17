@@ -72,6 +72,7 @@
                 <table style="width:100%; border-collapse:collapse; min-width: 820px;">
                     <thead>
                         <tr style="background:#f8f2de;">
+                            <th style="padding:10px; border:1px solid #efe3b7; text-align:right; width:70px;">ID</th>
                             <th style="padding:10px; border:1px solid #efe3b7; text-align:right;">المنتج</th>
                             <th style="padding:10px; border:1px solid #efe3b7; text-align:right; width:140px;">سعر المنتج</th>
                             <th style="padding:10px; border:1px solid #efe3b7; text-align:right; width:120px;">الكمية</th>
@@ -81,6 +82,7 @@
                     <tbody>
                         @foreach ($order->items as $item)
                             <tr>
+                                <td style="padding:10px; border:1px solid #efe3b7; font-weight:900; color:#92400e;">{{ $item->product_id }}</td>
                                 <td style="padding:10px; border:1px solid #efe3b7; font-weight:700;">{{ $item->product_title }}</td>
                                 <td style="padding:10px; border:1px solid #efe3b7; font-weight:800;">
                                     {{ number_format((float) $item->unit_price, 2) }} د.ك

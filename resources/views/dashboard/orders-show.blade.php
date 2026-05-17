@@ -161,13 +161,14 @@
     </section>
 
     <section class="card" style="margin-bottom:14px;">
-        <h3 style="margin:0 0 14px; font-weight:800;">تفاصيل الطلب</h3>
+        <h3 style="margin:0 0 14px; font-weight:800;">المنتجات المربوطة</h3>
 
         @if ($order->items->isNotEmpty())
-            <div style="overflow-x:auto;">
-                <table style="width:100%; border-collapse:collapse; min-width:640px;">
+            <div style="overflow-x:auto; margin-bottom:16px;">
+                <table style="width:100%; border-collapse:collapse; min-width:680px;">
                     <thead>
                         <tr style="background:#f8f2de;">
+                            <th style="padding:10px; border:1px solid #efe3b7; text-align:right; width:70px;">ID</th>
                             <th style="padding:10px; border:1px solid #efe3b7; text-align:right;">المنتج</th>
                             <th style="padding:10px; border:1px solid #efe3b7; text-align:center; width:100px;">الكمية</th>
                             <th style="padding:10px; border:1px solid #efe3b7; text-align:center; width:120px;">السعر</th>
@@ -177,36 +178,65 @@
                     <tbody>
                         @foreach ($order->items as $item)
                             <tr>
-                                <td style="padding:10px; border:1px solid #efe3b7; font-weight:700;">{{ $item->product_title }}</td>
+                                <td style="padding:10px; border:1px solid #efe3b7; font-weight:900; color:#92400e;">{{ $item->product_id }}</td>
+                                <td style="padding:10px; border:1px solid #efe3b7; font-weight:700;">
+                                    <a href="{{ route('products.edit', $item->product_id) }}" style="color:#92400e; text-decoration:none;">
+                                        {{ $item->product_title }}
+                                    </a>
+                                </td>
                                 <td style="padding:10px; border:1px solid #efe3b7; text-align:center; font-weight:700;">{{ $item->quantity }}</td>
-                                <td style="padding:10px; border:1px solid #efe3b7; text-align:center; font-weight:700;">{{ number_format((float) $item->unit_price, 2) }} د.ك</td>
-                                <td style="padding:10px; border:1px solid #efe3b7; text-align:center; font-weight:800;">{{ number_format((float) $item->line_total, 2) }} د.ك</td>
+                                <td style="padding:10px; border:1px solid #efe3b7; text-align:center; font-weight:700;">{{ number_format((float) $item->unit_price, 3) }} د.ك</td>
+                                <td style="padding:10px; border:1px solid #efe3b7; text-align:center; font-weight:800;">{{ number_format((float) $item->line_total, 3) }} د.ك</td>
                             </tr>
                         @endforeach
                     </tbody>
                 </table>
             </div>
         @elseif (!empty($order->items_text))
-            <div style="border:1px solid #efe3b7; border-radius:10px; padding:14px; background:#fffcf2; margin-bottom:14px;">
-                <div style="font-weight:700; margin-bottom:8px; color:#6b7280; font-size:13px;">المنتجات (نص)</div>
+            <div style="border:1px solid #fcd34d; border-radius:10px; padding:14px; background:#fffbeb; margin-bottom:16px;">
+                <div style="font-weight:800; margin-bottom:8px; color:#92400e; font-size:13px;">منتجات مسجّلة كنص فقط (غير مربوطة بـ ID)</div>
                 <div style="white-space:pre-wrap; line-height:1.8; font-weight:600; color:#374151;">{{ $order->items_text }}</div>
+                <p style="margin:10px 0 0; font-size:12px; color:#6b7280; font-weight:600;">
+                    اختر المنتجات بالـ ID أدناه لربطها بهذا الطلب.
+                </p>
             </div>
         @else
-            <p style="color:#6b7280; margin:0 0 14px;">لا توجد منتجات مسجلة في هذا الطلب.</p>
+            <p style="color:#6b7280; margin:0 0 16px; font-weight:600;">لا توجد منتجات مربوطة بعد — أضفها من النموذج أدناه.</p>
         @endif
+
+        @if ($errors->any())
+            <div style="background:#fff1f2; color:#be123c; border:1px solid #fecdd3; border-radius:10px; padding:10px 12px; margin-bottom:12px;">
+                <ul style="margin:0; padding-right:16px;">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
+        <form method="POST" action="{{ route('orders.items', $order) }}">
+            @csrf
+            @method('PUT')
+            @include('dashboard.partials.order-items-form', ['order' => $order])
+            <div style="margin-top:12px;">
+                <button type="submit" style="border:none; background:#d4af37; color:#111827; padding:10px 18px; border-radius:8px; font-weight:800; font-family:inherit; cursor:pointer;">
+                    حفظ المنتجات المربوطة
+                </button>
+            </div>
+        </form>
 
         <div style="margin-top:16px; max-width:360px; margin-right:auto; margin-left:0;">
             <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px dashed #efe3b7;">
                 <span style="color:#6b7280; font-weight:600;">المجموع الفرعي</span>
-                <span style="font-weight:800;">{{ number_format($subtotal, 2) }} د.ك</span>
+                <span style="font-weight:800;">{{ number_format($subtotal, 3) }} د.ك</span>
             </div>
             <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px dashed #efe3b7;">
                 <span style="color:#6b7280; font-weight:600;">التوصيل</span>
-                <span style="font-weight:800;">{{ number_format($deliveryFee, 2) }} د.ك</span>
+                <span style="font-weight:800;">{{ number_format($deliveryFee, 3) }} د.ك</span>
             </div>
             <div style="display:flex; justify-content:space-between; padding:12px 0 4px;">
                 <span style="font-weight:800; font-size:16px;">الإجمالي</span>
-                <span style="font-weight:900; font-size:18px; color:#111827;">{{ number_format($grandTotal, 2) }} د.ك</span>
+                <span style="font-weight:900; font-size:18px; color:#111827;">{{ number_format($grandTotal, 3) }} د.ك</span>
             </div>
         </div>
     </section>

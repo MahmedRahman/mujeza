@@ -385,51 +385,14 @@
                     "Orders"
                 ],
                 "summary": "Create order",
-                "description": "Creates a new order. The items field must be a single text value describing requested products. Pass remote_jid to auto-fill customer name and phone from the customers table.",
+                "description": "إنشاء طلب جديد. المنتجات عبر items_id و items_qty (نص مفصول بفواصل أو مصفوفة). مثال: items_id=12,5,8 و items_qty=2,1,4",
                 "operationId": "storeOrder",
                 "requestBody": {
                     "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
-                                "required": [
-                                    "items"
-                                ],
-                                "properties": {
-                                    "remote_jid": {
-                                        "type": "string",
-                                        "example": "96550000000@s.whatsapp.net",
-                                        "nullable": true
-                                    },
-                                    "customer_name": {
-                                        "type": "string",
-                                        "example": "محمد أحمد",
-                                        "nullable": true
-                                    },
-                                    "phone": {
-                                        "type": "string",
-                                        "example": "96550000000",
-                                        "nullable": true
-                                    },
-                                    "delivery_address": {
-                                        "type": "string",
-                                        "example": "الكويت - حولي - شارع بيروت - قطعة 4 - منزل 12",
-                                        "nullable": true
-                                    },
-                                    "delivery_fee": {
-                                        "type": "number",
-                                        "example": 1.5,
-                                        "nullable": true
-                                    },
-                                    "status": {
-                                        "$ref": "#/components/schemas/OrderStatus"
-                                    },
-                                    "items": {
-                                        "type": "string",
-                                        "example": "عسل سدر 2 عبوة + عسل كشميري 1 عبوة"
-                                    }
-                                },
-                                "type": "object"
+                                "$ref": "#/components/schemas/OrderCreateRequest"
                             }
                         }
                     }
@@ -504,6 +467,7 @@
                     "Orders"
                 ],
                 "summary": "Update order",
+                "description": "تحديث الطلب. عند إرسال items_id و items_qty تُستبدل المنتجات المربوطة بالكامل (مثال: items_id=12,5 و items_qty=2,1).",
                 "operationId": "updateOrder",
                 "parameters": [
                     {
@@ -520,30 +484,7 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "properties": {
-                                    "status": {
-                                        "$ref": "#/components/schemas/OrderStatus"
-                                    },
-                                    "delivery_address": {
-                                        "type": "string",
-                                        "nullable": true
-                                    },
-                                    "delivery_fee": {
-                                        "type": "number",
-                                        "example": 1.5
-                                    },
-                                    "items": {
-                                        "description": "Single text describing requested products (not an array)",
-                                        "type": "string",
-                                        "nullable": true
-                                    },
-                                    "status_note": {
-                                        "description": "Note recorded in status history when status changes",
-                                        "type": "string",
-                                        "nullable": true
-                                    }
-                                },
-                                "type": "object"
+                                "$ref": "#/components/schemas/OrderUpdateRequest"
                             }
                         }
                     }
@@ -1514,8 +1455,9 @@
                         "$ref": "#/components/schemas/OrderStatus"
                     },
                     "items": {
+                        "description": "ملخّص نصي للمنتجات (يُولَّد من line_items عند الربط)",
                         "type": "string",
-                        "example": "عسل سدر 2 عبوة"
+                        "example": "#12 عسل سدر x2"
                     }
                 },
                 "type": "object"
@@ -1819,18 +1761,170 @@
                     "ملغي"
                 ]
             },
+            "OrderCreateRequest": {
+                "required": [
+                    "items_id",
+                    "items_qty"
+                ],
+                "properties": {
+                    "remote_jid": {
+                        "description": "يُستخدم لجلب اسم العميل والهاتف والعنوان تلقائياً إن وُجد في customers",
+                        "type": "string",
+                        "example": "96550000000@s.whatsapp.net",
+                        "nullable": true
+                    },
+                    "customer_name": {
+                        "type": "string",
+                        "example": "محمد أحمد",
+                        "nullable": true
+                    },
+                    "phone": {
+                        "type": "string",
+                        "example": "96550000000",
+                        "nullable": true
+                    },
+                    "delivery_address": {
+                        "type": "string",
+                        "example": "الكويت - حولي - شارع بيروت",
+                        "nullable": true
+                    },
+                    "delivery_fee": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 1.5,
+                        "nullable": true
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/OrderStatus"
+                    },
+                    "items_id": {
+                        "description": "معرّفات المنتجات — نص مفصول بفواصل أو مصفوفة أرقام. الموضع يطابق items_qty",
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "example": "12,5,8"
+                            },
+                            {
+                                "type": "array",
+                                "items": {
+                                    "type": "integer"
+                                },
+                                "example": [
+                                    12,
+                                    5,
+                                    8
+                                ]
+                            }
+                        ]
+                    },
+                    "items_qty": {
+                        "description": "كميات المنتجات — نص مفصول بفواصل أو مصفوفة أرقام بنفس ترتيب items_id",
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "example": "2,1,4"
+                            },
+                            {
+                                "type": "array",
+                                "items": {
+                                    "type": "integer"
+                                },
+                                "example": [
+                                    2,
+                                    1,
+                                    4
+                                ]
+                            }
+                        ]
+                    }
+                },
+                "type": "object",
+                "example": {
+                    "remote_jid": "96550000000@s.whatsapp.net",
+                    "delivery_address": "الكويت - حولي",
+                    "delivery_fee": 1.5,
+                    "status": "طلب جديد",
+                    "items_id": "12,5,8",
+                    "items_qty": "2,1,4"
+                }
+            },
+            "OrderUpdateRequest": {
+                "properties": {
+                    "status": {
+                        "$ref": "#/components/schemas/OrderStatus"
+                    },
+                    "delivery_address": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "delivery_fee": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 1.5
+                    },
+                    "items_id": {
+                        "description": "معرّفات المنتجات (يُرسل مع items_qty لاستبدال بنود الطلب)",
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "example": "12,5"
+                            },
+                            {
+                                "type": "array",
+                                "items": {
+                                    "type": "integer"
+                                }
+                            }
+                        ]
+                    },
+                    "items_qty": {
+                        "description": "كميات المنتجات المقابلة لـ items_id",
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "example": "2,1"
+                            },
+                            {
+                                "type": "array",
+                                "items": {
+                                    "type": "integer"
+                                }
+                            }
+                        ]
+                    },
+                    "status_note": {
+                        "description": "تُسجَّل في سجل الحالات عند تغيير status",
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "type": "object",
+                "example": {
+                    "status": "تم التأكيد",
+                    "items_id": "12,5",
+                    "items_qty": "3,1"
+                }
+            },
             "OrderLineItem": {
+                "required": [
+                    "product_id",
+                    "product_title",
+                    "unit_price",
+                    "quantity",
+                    "line_total"
+                ],
                 "properties": {
                     "product_id": {
+                        "description": "معرّف المنتج المربوط",
                         "type": "integer",
-                        "example": 12,
-                        "nullable": true
+                        "example": 12
                     },
                     "product_title": {
                         "type": "string",
                         "example": "عسل سدر"
                     },
                     "unit_price": {
+                        "description": "سعر الوحدة (يُستخدم سعر الخصم إن وُجد)",
                         "type": "number",
                         "format": "float",
                         "example": 5.5
@@ -1915,6 +2009,7 @@
                         "nullable": true
                     },
                     "subtotal": {
+                        "description": "مجموع بنود المنتجات",
                         "type": "number",
                         "format": "float",
                         "example": 11
@@ -1925,20 +2020,24 @@
                         "example": 1.5
                     },
                     "grand_total": {
+                        "description": "subtotal + delivery_fee",
                         "type": "number",
                         "format": "float",
                         "example": 12.5
                     },
                     "total_amount": {
+                        "description": "مطابق لـ grand_total",
                         "type": "number",
                         "format": "float",
                         "example": 12.5
                     },
                     "items": {
+                        "description": "ملخّص نصي يُولَّد تلقائياً من line_items",
                         "type": "string",
-                        "example": "عسل سدر 2 عبوة + عسل كشميري 1 عبوة"
+                        "example": "#12 عسل سدر x2 + #5 عسل كشميري x1"
                     },
                     "line_items": {
+                        "description": "المنتجات المربوطة بالطلب (المصدر الرئيسي)",
                         "type": "array",
                         "items": {
                             "$ref": "#/components/schemas/OrderLineItem"
@@ -2062,6 +2161,11 @@
                     "message": {
                         "type": "string",
                         "example": "الطلب غير موجود."
+                    },
+                    "example": {
+                        "description": "مثال على الصيغة الصحيحة",
+                        "type": "object",
+                        "nullable": true
                     }
                 },
                 "type": "object"

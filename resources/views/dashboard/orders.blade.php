@@ -59,13 +59,14 @@
             </p>
         @else
             <div style="overflow-x:auto;">
-                <table style="width: 100%; border-collapse: collapse; min-width: 600px;">
+                <table style="width: 100%; border-collapse: collapse; min-width: 900px;">
                     <thead>
                         <tr style="background: #f8f2de;">
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">رقم الطلب</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">الاسم</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">التليفون</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">العنوان</th>
+                            <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">المنتجات</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">الحالة</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">تاريخ الإدخال</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">الإجراءات</th>
@@ -103,6 +104,23 @@
                                         {{ $order->customer->address }}
                                     @elseif ($order->delivery_address)
                                         {{ $order->delivery_address }}
+                                    @else
+                                        <span style="color:#9ca3af;">—</span>
+                                    @endif
+                                </td>
+                                <td style="padding: 10px; border: 1px solid #efe3b7; color:#374151; font-size:13px; max-width:240px;">
+                                    @if ($order->items->isNotEmpty())
+                                        <div style="display:grid; gap:4px;">
+                                            @foreach ($order->items as $item)
+                                                <div style="font-weight:700; line-height:1.4;">
+                                                    <span style="color:#92400e; font-weight:900;">#{{ $item->product_id }}</span>
+                                                    {{ $item->product_title }}
+                                                    <span style="color:#6b7280; font-weight:600;">×{{ $item->quantity }}</span>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    @elseif (!empty($order->items_text))
+                                        <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block;">{{ $order->items_text }}</span>
                                     @else
                                         <span style="color:#9ca3af;">—</span>
                                     @endif

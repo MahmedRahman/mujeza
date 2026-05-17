@@ -60,10 +60,7 @@
                 </div>
 
                 {{-- المنتجات --}}
-                <div style="grid-column: 1 / -1;">
-                    <label style="display:block; margin-bottom:6px; font-weight:700;">المنتجات المطلوبة <span style="color:#b91c1c;">*</span></label>
-                    <textarea name="items" rows="4" required placeholder="مثال: عسل سدر 2 عبوة + عسل كشميري 1 عبوة" style="width:100%; border:1px solid #d1d5db; border-radius:8px; padding:10px; font-family:inherit; resize:vertical;">{{ old('items') }}</textarea>
-                </div>
+                @include('dashboard.partials.order-items-form')
 
                 {{-- حالة الطلب --}}
                 <div>

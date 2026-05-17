@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Setting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -442,15 +444,14 @@ class WhatsAppController extends Controller
      */
     public function getDirectChatsForReporting(): array
     {
-        return Cache::remember('reports.direct_chats', 300, function () {
+        $cached = Cache::remember('reports.direct_chats.v2', 300, function () {
             $cfg = $this->evoSettings();
 
             if (! $cfg['url'] || ! $cfg['instance']) {
-                return [
-                    'error'        => 'واتساب غير مُعدّ — راجع الإعدادات.',
-                    'generated_at' => now(),
-                    'chats'        => collect(),
-                ];
+                return $this->serializeDirectChatsReportPayload(
+                    'واتساب غير مُعدّ — راجع الإعدادات.',
+                    collect()
+                );
             }
 
             try {
@@ -459,11 +460,10 @@ class WhatsAppController extends Controller
                     ->post("{$cfg['url']}/chat/findChats/{$cfg['instance']}", []);
 
                 if (! $response->successful()) {
-                    return [
-                        'error'        => 'تعذر جلب المحادثات من واتساب.',
-                        'generated_at' => now(),
-                        'chats'        => collect(),
-                    ];
+                    return $this->serializeDirectChatsReportPayload(
+                        'تعذر جلب المحادثات من واتساب.',
+                        collect()
+                    );
                 }
 
                 $raw = $response->json();
@@ -477,19 +477,47 @@ class WhatsAppController extends Controller
                     $this->autoReplyChatOverrides()
                 )->values();
 
-                return [
-                    'error'        => null,
-                    'generated_at' => now(),
-                    'chats'        => $chats,
-                ];
+                return $this->serializeDirectChatsReportPayload(null, $chats);
             } catch (\Throwable) {
-                return [
-                    'error'        => 'تعذر الاتصال بخادم واتساب.',
-                    'generated_at' => now(),
-                    'chats'        => collect(),
-                ];
+                return $this->serializeDirectChatsReportPayload(
+                    'تعذر الاتصال بخادم واتساب.',
+                    collect()
+                );
             }
         });
+
+        return $this->hydrateDirectChatsReportPayload($cached);
+    }
+
+    /**
+     * @return array{error: string|null, generated_at: string, chats: list<array<string, mixed>>}
+     */
+    private function serializeDirectChatsReportPayload(?string $error, Collection $chats): array
+    {
+        return [
+            'error'        => $error,
+            'generated_at' => now()->toIso8601String(),
+            'chats'        => $chats->values()->all(),
+        ];
+    }
+
+    /**
+     * @param  array{error?: string|null, generated_at?: string, chats?: list<array<string, mixed>>}  $payload
+     * @return array{
+     *     error: string|null,
+     *     generated_at: Carbon,
+     *     chats: Collection<int, array<string, mixed>>
+     * }
+     */
+    private function hydrateDirectChatsReportPayload(array $payload): array
+    {
+        $generatedAt = $payload['generated_at'] ?? null;
+
+        return [
+            'error'        => $payload['error'] ?? null,
+            'generated_at' => $generatedAt ? Carbon::parse($generatedAt) : now(),
+            'chats'        => collect($payload['chats'] ?? []),
+        ];
     }
 
     /**

@@ -33,7 +33,12 @@ use OpenApi\Attributes as OA;
     properties: [
         new OA\Property(property: 'order_number', type: 'integer', example: 1024),
         new OA\Property(property: 'status', ref: '#/components/schemas/OrderStatus'),
-        new OA\Property(property: 'items', type: 'string', example: 'عسل سدر 2 عبوة'),
+        new OA\Property(
+            property: 'items',
+            type: 'string',
+            example: '#12 عسل سدر x2',
+            description: 'ملخّص نصي للمنتجات (يُولَّد من line_items عند الربط)'
+        ),
     ]
 )]
 #[OA\Schema(

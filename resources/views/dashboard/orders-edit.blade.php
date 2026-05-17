@@ -105,13 +105,7 @@
                 </div>
             </div>
 
-            {{-- عرض المنتجات المسجلة في قاعدة البيانات --}}
-            @if ($order->items_text)
-                <div style="border:1px solid #efe3b7; border-radius:10px; padding:14px; background:#fffcf2; margin-bottom: 14px;">
-                    <div style="font-weight:800; margin-bottom:8px; color:#374151;">المنتجات المطلوبة</div>
-                    <div style="color:#374151; font-size:15px; line-height:1.8; white-space: pre-wrap; word-break: break-word;">{{ $order->items_text }}</div>
-                </div>
-            @endif
+            @include('dashboard.partials.order-items-form', ['order' => $order])
 
             {{-- إشعار واتساب --}}
             <div style="border:1px solid #d1fae5; border-radius:10px; padding:14px 16px; background:#f0fdf4; margin-bottom:14px; display:flex; align-items:flex-start; gap:12px;">
