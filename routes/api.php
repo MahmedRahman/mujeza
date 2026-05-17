@@ -22,9 +22,11 @@ Route::get('/complaints/{complaint}', [AuthController::class, 'apiShowComplaint'
 Route::match(['put', 'patch'], '/complaints/{complaint}', [AuthController::class, 'apiUpdateComplaint'])->name('api.complaints.update');
 Route::delete('/complaints/{complaint}', [AuthController::class, 'apiDestroyComplaint'])->name('api.complaints.destroy');
 
-Route::post('/orders', [AuthController::class, 'apiStoreOrder'])->name('api.orders.store');
 Route::get('/orders/status', [AuthController::class, 'apiOrderStatusByPhone'])->name('api.orders.status-by-phone');
 Route::get('/orders/by-phone', [AuthController::class, 'apiOrdersByPhone'])->name('api.orders.by-phone');
+Route::get('/orders/{order_number}', [AuthController::class, 'apiShowOrder'])->name('api.orders.show')->where('order_number', '[0-9]+');
+Route::match(['put', 'patch'], '/orders/{order_number}', [AuthController::class, 'apiUpdateOrder'])->name('api.orders.update')->where('order_number', '[0-9]+');
+Route::post('/orders', [AuthController::class, 'apiStoreOrder'])->name('api.orders.store');
 Route::get('/agent/prompts', [AuthController::class, 'apiAgentPrompts'])->name('api.agent.prompts');
 
 Route::get('/faqs', [AuthController::class, 'apiFaqs'])->name('api.faqs.index');

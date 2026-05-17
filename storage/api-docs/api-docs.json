@@ -2,7 +2,7 @@
     "openapi": "3.0.0",
     "info": {
         "title": "Mujeza API",
-        "description": "API documentation for Mujeza products and related endpoints.",
+        "description": "API documentation for Mujeza — products, orders, complaints, and WhatsApp integrations. Order statuses: طلب جديد، تم التأكيد، قيد التجهيز، خرج للتوصيل، مكتمل، ملغي.",
         "version": "1.0.0"
     },
     "servers": [
@@ -401,14 +401,28 @@
                                         "example": "96550000000@s.whatsapp.net",
                                         "nullable": true
                                     },
+                                    "customer_name": {
+                                        "type": "string",
+                                        "example": "محمد أحمد",
+                                        "nullable": true
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "96550000000",
+                                        "nullable": true
+                                    },
                                     "delivery_address": {
                                         "type": "string",
                                         "example": "الكويت - حولي - شارع بيروت - قطعة 4 - منزل 12",
                                         "nullable": true
                                     },
+                                    "delivery_fee": {
+                                        "type": "number",
+                                        "example": 1.5,
+                                        "nullable": true
+                                    },
                                     "status": {
-                                        "type": "string",
-                                        "example": "قيد المعالجة"
+                                        "$ref": "#/components/schemas/OrderStatus"
                                     },
                                     "items": {
                                         "type": "string",
@@ -422,10 +436,148 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "Order created successfully"
+                        "description": "Order created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OrderMutationResponse"
+                                }
+                            }
+                        }
                     },
                     "422": {
-                        "description": "Validation error"
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/orders/{order_number}": {
+            "get": {
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "Get order by order number",
+                "operationId": "showOrder",
+                "parameters": [
+                    {
+                        "name": "order_number",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Order fetched successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OrderShowResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Order not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "Update order",
+                "operationId": "updateOrder",
+                "parameters": [
+                    {
+                        "name": "order_number",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "status": {
+                                        "$ref": "#/components/schemas/OrderStatus"
+                                    },
+                                    "delivery_address": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "delivery_fee": {
+                                        "type": "number",
+                                        "example": 1.5
+                                    },
+                                    "items": {
+                                        "description": "Single text describing requested products (not an array)",
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "status_note": {
+                                        "description": "Note recorded in status history when status changes",
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Order updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OrderMutationResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Order not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrorResponse"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -436,7 +588,7 @@
                     "Orders"
                 ],
                 "summary": "Get order status",
-                "description": "Returns latest order status and all matching orders by order_number, customer_name, or phone. When searching by phone, cancelled (\"ملغي\") and delivered (\"تم التسليم\") orders are excluded by default — pass include_closed=1 to include them.",
+                "description": "Returns latest order status and all matching orders by order_number, customer_name, or phone. When searching by phone, cancelled (\"ملغي\") and completed (\"مكتمل\") orders are excluded by default — pass include_closed=1 to include them.",
                 "operationId": "getOrderStatusByPhone",
                 "parameters": [
                     {
@@ -472,7 +624,7 @@
                     {
                         "name": "include_closed",
                         "in": "query",
-                        "description": "Set to 1 to include cancelled and delivered orders (only applies to phone search)",
+                        "description": "Set to 1 to include cancelled (ملغي) and completed (مكتمل) orders (only applies to phone search)",
                         "required": false,
                         "schema": {
                             "type": "integer",
@@ -490,42 +642,20 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
-                                        },
-                                        "found": {
-                                            "type": "boolean",
-                                            "example": true
-                                        },
-                                        "latest_status": {
-                                            "type": "string",
-                                            "example": "قيد المعالجة",
-                                            "nullable": true
-                                        },
-                                        "count": {
-                                            "type": "integer",
-                                            "example": 2
-                                        },
-                                        "latest_order": {
-                                            "type": "object",
-                                            "nullable": true
-                                        },
-                                        "orders": {
-                                            "type": "array",
-                                            "items": {
-                                                "type": "object"
-                                            }
-                                        }
-                                    },
-                                    "type": "object"
+                                    "$ref": "#/components/schemas/OrderStatusSearchResponse"
                                 }
                             }
                         }
                     },
                     "422": {
-                        "description": "Validation error"
+                        "description": "Validation error — provide order_number, customer_name, or phone",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrorResponse"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -536,7 +666,7 @@
                     "Orders"
                 ],
                 "summary": "Get active orders by phone number",
-                "description": "Returns all orders for the given phone number, excluding cancelled (\"ملغي\") and delivered (\"تم التسليم\") orders.",
+                "description": "Returns all orders for the given phone number, excluding cancelled (\"ملغي\") and completed (\"مكتمل\") orders.",
                 "operationId": "getOrdersByPhone",
                 "parameters": [
                     {
@@ -556,33 +686,20 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
-                                        },
-                                        "phone": {
-                                            "type": "string",
-                                            "example": "96550000000"
-                                        },
-                                        "count": {
-                                            "type": "integer",
-                                            "example": 2
-                                        },
-                                        "orders": {
-                                            "type": "array",
-                                            "items": {
-                                                "type": "object"
-                                            }
-                                        }
-                                    },
-                                    "type": "object"
+                                    "$ref": "#/components/schemas/OrdersByPhoneResponse"
                                 }
                             }
                         }
                     },
                     "422": {
-                        "description": "حقل phone مطلوب"
+                        "description": "حقل phone مطلوب",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrorResponse"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -1358,6 +1475,269 @@
                         "description": "Validation error"
                     }
                 }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "OrderStatus": {
+                "type": "string",
+                "example": "طلب جديد",
+                "enum": [
+                    "طلب جديد",
+                    "تم التأكيد",
+                    "قيد التجهيز",
+                    "خرج للتوصيل",
+                    "مكتمل",
+                    "ملغي"
+                ]
+            },
+            "OrderLineItem": {
+                "properties": {
+                    "product_id": {
+                        "type": "integer",
+                        "example": 12,
+                        "nullable": true
+                    },
+                    "product_title": {
+                        "type": "string",
+                        "example": "عسل سدر"
+                    },
+                    "unit_price": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 5.5
+                    },
+                    "quantity": {
+                        "type": "integer",
+                        "example": 2
+                    },
+                    "line_total": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 11
+                    }
+                },
+                "type": "object"
+            },
+            "OrderStatusHistoryEntry": {
+                "properties": {
+                    "status": {
+                        "$ref": "#/components/schemas/OrderStatus"
+                    },
+                    "note": {
+                        "type": "string",
+                        "example": "إنشاء الطلب عبر API",
+                        "nullable": true
+                    },
+                    "changed_by": {
+                        "type": "string",
+                        "example": "api",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "Order": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "order_number": {
+                        "type": "integer",
+                        "example": 1024
+                    },
+                    "remote_jid": {
+                        "type": "string",
+                        "example": "96550000000@s.whatsapp.net",
+                        "nullable": true
+                    },
+                    "customer_name": {
+                        "type": "string",
+                        "example": "محمد أحمد",
+                        "nullable": true
+                    },
+                    "phone": {
+                        "type": "string",
+                        "example": "96550000000",
+                        "nullable": true
+                    },
+                    "delivery_address": {
+                        "type": "string",
+                        "example": "الكويت - حولي",
+                        "nullable": true
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/OrderStatus"
+                    },
+                    "available_statuses": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/OrderStatus"
+                        }
+                    },
+                    "status_changed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "subtotal": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 11
+                    },
+                    "delivery_fee": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 1.5
+                    },
+                    "grand_total": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 12.5
+                    },
+                    "total_amount": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 12.5
+                    },
+                    "items": {
+                        "type": "string",
+                        "example": "عسل سدر 2 عبوة + عسل كشميري 1 عبوة"
+                    },
+                    "line_items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/OrderLineItem"
+                        }
+                    },
+                    "status_history": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/OrderStatusHistoryEntry"
+                        }
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "OrderMutationResponse": {
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "تم إنشاء الطلب بنجاح."
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/Order"
+                    }
+                },
+                "type": "object"
+            },
+            "OrderShowResponse": {
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/Order"
+                    }
+                },
+                "type": "object"
+            },
+            "OrderStatusSearchResponse": {
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "found": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "latest_status": {
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/OrderStatus"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "count": {
+                        "type": "integer",
+                        "example": 2
+                    },
+                    "latest_order": {
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/Order"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "orders": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Order"
+                        }
+                    }
+                },
+                "type": "object"
+            },
+            "OrdersByPhoneResponse": {
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "phone": {
+                        "type": "string",
+                        "example": "96550000000"
+                    },
+                    "count": {
+                        "type": "integer",
+                        "example": 2
+                    },
+                    "orders": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Order"
+                        }
+                    }
+                },
+                "type": "object"
+            },
+            "ApiErrorResponse": {
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "الطلب غير موجود."
+                    }
+                },
+                "type": "object"
             }
         }
     },

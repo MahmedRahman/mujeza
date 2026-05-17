@@ -85,6 +85,8 @@
             </div>
         </div>
 
+        @include('dashboard.partials.order-status-panel', ['order' => $order])
+
         <form method="POST" action="{{ route('orders.update', $order) }}">
             @csrf
             @method('PUT')

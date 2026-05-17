@@ -600,7 +600,10 @@ class AuthController extends Controller
 
     public function editOrder(Order $order): View
     {
-        $order->load('customer');
+        $order->load([
+            'customer',
+            'statusHistories' => fn ($query) => $query->orderBy('created_at'),
+        ]);
 
         return view('dashboard.orders-edit', [
             'order'    => $order,
@@ -743,14 +746,28 @@ class AuthController extends Controller
             ->with('success', 'تم حفظ الملاحظات بنجاح.');
     }
 
-    private function recordOrderStatusChange(Order $order, string $status, ?string $note = null): void
+    private function recordOrderStatusChange(Order $order, string $status, ?string $note = null, ?string $changedBy = null): void
     {
         OrderStatusHistory::query()->create([
             'order_id'   => $order->id,
             'status'     => $status,
-            'changed_by' => Auth::user()?->email,
+            'changed_by' => $changedBy ?? Auth::user()?->email ?? 'api',
             'note'       => $note,
         ]);
+    }
+
+    private function applyPhoneFilterToOrdersQuery($query, string $phone): void
+    {
+        $digits = preg_replace('/\D+/', '', $phone) ?? '';
+
+        $query->where(function ($builder) use ($phone, $digits) {
+            $builder->where('phone', $phone);
+
+            if ($digits !== '') {
+                $builder->orWhere('phone', 'like', '%'.$digits.'%')
+                    ->orWhere('remote_jid', 'like', '%'.$digits.'%');
+            }
+        });
     }
 
     private function sendWhatsAppText(string $remoteJid, string $text): bool
@@ -1336,15 +1353,26 @@ class AuthController extends Controller
                 required: ['items'],
                 properties: [
                     new OA\Property(property: 'remote_jid', type: 'string', example: '96550000000@s.whatsapp.net', nullable: true),
+                    new OA\Property(property: 'customer_name', type: 'string', example: 'محمد أحمد', nullable: true),
+                    new OA\Property(property: 'phone', type: 'string', example: '96550000000', nullable: true),
                     new OA\Property(property: 'delivery_address', type: 'string', example: 'الكويت - حولي - شارع بيروت - قطعة 4 - منزل 12', nullable: true),
-                    new OA\Property(property: 'status', type: 'string', example: 'طلب جديد'),
+                    new OA\Property(property: 'delivery_fee', type: 'number', example: 1.5, nullable: true),
+                    new OA\Property(property: 'status', ref: '#/components/schemas/OrderStatus'),
                     new OA\Property(property: 'items', type: 'string', example: 'عسل سدر 2 عبوة + عسل كشميري 1 عبوة'),
                 ]
             )
         ),
         responses: [
-            new OA\Response(response: 201, description: 'Order created successfully'),
-            new OA\Response(response: 422, description: 'Validation error'),
+            new OA\Response(
+                response: 201,
+                description: 'Order created successfully',
+                content: new OA\JsonContent(ref: '#/components/schemas/OrderMutationResponse')
+            ),
+            new OA\Response(
+                response: 422,
+                description: 'Validation error',
+                content: new OA\JsonContent(ref: '#/components/schemas/ApiErrorResponse')
+            ),
         ]
     )]
     public function apiStoreOrder(Request $request): JsonResponse
@@ -1361,7 +1389,10 @@ class AuthController extends Controller
 
         $validated = $request->validate([
             'remote_jid'       => ['nullable', 'string', 'max:255'],
+            'customer_name'    => ['nullable', 'string', 'max:255'],
+            'phone'            => ['nullable', 'string', 'max:50'],
             'delivery_address' => ['nullable', 'string', 'max:2000'],
+            'delivery_fee'     => ['nullable', 'numeric', 'min:0'],
             'status'           => ['nullable', 'string', Rule::in(Order::STATUSES)],
             'items'            => ['required', 'string', 'max:5000'],
         ]);
@@ -1370,24 +1401,201 @@ class AuthController extends Controller
             $orderNumber = (int) (Order::query()->max('order_number') ?? 0) + 1;
             $remoteJid   = trim((string) ($validated['remote_jid'] ?? ''));
             $customer    = $remoteJid ? Customer::query()->where('remote_jid', $remoteJid)->first() : null;
+            $status      = $validated['status'] ?? Order::DEFAULT_STATUS;
 
-            return Order::query()->create([
-                'order_number'     => $orderNumber,
-                'remote_jid'       => $remoteJid ?: null,
-                'customer_name'    => $customer?->name,
-                'phone'            => $customer?->phone,
-                'delivery_address' => trim((string) ($validated['delivery_address'] ?? '')),
-                'items_text'       => trim((string) $validated['items']),
-                'status'           => $validated['status'] ?? Order::DEFAULT_STATUS,
-                'total_amount'     => 0,
+            $deliveryAddress = trim((string) ($validated['delivery_address'] ?? ''));
+            if ($deliveryAddress === '' && $customer?->address) {
+                $deliveryAddress = trim((string) $customer->address);
+            }
+
+            $order = Order::query()->create([
+                'order_number'      => $orderNumber,
+                'remote_jid'        => $remoteJid ?: null,
+                'customer_name'     => trim((string) ($validated['customer_name'] ?? '')) ?: $customer?->name,
+                'phone'             => trim((string) ($validated['phone'] ?? '')) ?: $customer?->phone,
+                'delivery_address'  => $deliveryAddress,
+                'items_text'        => trim((string) $validated['items']),
+                'status'            => $status,
+                'status_changed_at' => now(),
+                'total_amount'      => 0,
+                'delivery_fee'      => (float) ($validated['delivery_fee'] ?? 0),
             ]);
+
+            $this->recordOrderStatusChange($order, $status, 'إنشاء الطلب عبر API', 'api');
+
+            return $order;
         });
+
+        $order->load(['items', 'customer', 'statusHistories' => fn ($query) => $query->orderBy('created_at')]);
 
         return response()->json([
             'success' => true,
             'message' => 'تم إنشاء الطلب بنجاح.',
             'data' => $this->transformOrderForApi($order),
         ], 201);
+    }
+
+    #[OA\Get(
+        path: '/api/orders/{order_number}',
+        operationId: 'showOrder',
+        tags: ['Orders'],
+        summary: 'Get order by order number',
+        parameters: [
+            new OA\Parameter(
+                name: 'order_number',
+                in: 'path',
+                required: true,
+                schema: new OA\Schema(type: 'integer', example: 1)
+            ),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Order fetched successfully',
+                content: new OA\JsonContent(ref: '#/components/schemas/OrderShowResponse')
+            ),
+            new OA\Response(
+                response: 404,
+                description: 'Order not found',
+                content: new OA\JsonContent(ref: '#/components/schemas/ApiErrorResponse')
+            ),
+        ]
+    )]
+    public function apiShowOrder(int $order_number): JsonResponse
+    {
+        $order = Order::query()
+            ->with(['items', 'customer', 'statusHistories' => fn ($query) => $query->orderBy('created_at')])
+            ->where('order_number', $order_number)
+            ->first();
+
+        if (! $order) {
+            return response()->json([
+                'success' => false,
+                'message' => 'الطلب غير موجود.',
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data'    => $this->transformOrderForApi($order),
+        ]);
+    }
+
+    #[OA\Patch(
+        path: '/api/orders/{order_number}',
+        operationId: 'updateOrder',
+        tags: ['Orders'],
+        summary: 'Update order',
+        parameters: [
+            new OA\Parameter(
+                name: 'order_number',
+                in: 'path',
+                required: true,
+                schema: new OA\Schema(type: 'integer', example: 1)
+            ),
+        ],
+        requestBody: new OA\RequestBody(
+            content: new OA\JsonContent(
+                properties: [
+                    new OA\Property(property: 'status', ref: '#/components/schemas/OrderStatus'),
+                    new OA\Property(property: 'delivery_address', type: 'string', nullable: true),
+                    new OA\Property(property: 'delivery_fee', type: 'number', example: 1.5),
+                    new OA\Property(property: 'items', type: 'string', nullable: true, description: 'Single text describing requested products (not an array)'),
+                    new OA\Property(property: 'status_note', type: 'string', nullable: true, description: 'Note recorded in status history when status changes'),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Order updated successfully',
+                content: new OA\JsonContent(ref: '#/components/schemas/OrderMutationResponse')
+            ),
+            new OA\Response(
+                response: 404,
+                description: 'Order not found',
+                content: new OA\JsonContent(ref: '#/components/schemas/ApiErrorResponse')
+            ),
+            new OA\Response(
+                response: 422,
+                description: 'Validation error',
+                content: new OA\JsonContent(ref: '#/components/schemas/ApiErrorResponse')
+            ),
+        ]
+    )]
+    public function apiUpdateOrder(Request $request, int $order_number): JsonResponse
+    {
+        $order = Order::query()->where('order_number', $order_number)->first();
+
+        if (! $order) {
+            return response()->json([
+                'success' => false,
+                'message' => 'الطلب غير موجود.',
+            ], 404);
+        }
+
+        if ($request->has('items') && is_array($request->input('items'))) {
+            return response()->json([
+                'success' => false,
+                'message' => 'حقل items لازم يكون نص واحد وليس list/array.',
+            ], 422);
+        }
+
+        $validated = $request->validate([
+            'status'           => ['sometimes', 'string', Rule::in(Order::STATUSES)],
+            'delivery_address' => ['sometimes', 'nullable', 'string', 'max:2000'],
+            'delivery_fee'     => ['sometimes', 'nullable', 'numeric', 'min:0'],
+            'items'            => ['sometimes', 'string', 'max:5000'],
+            'status_note'      => ['sometimes', 'nullable', 'string', 'max:500'],
+        ]);
+
+        $oldStatus = $order->status;
+
+        DB::transaction(function () use ($order, $validated, $oldStatus) {
+            $updates = [];
+
+            if (array_key_exists('delivery_address', $validated)) {
+                $updates['delivery_address'] = trim((string) ($validated['delivery_address'] ?? ''));
+            }
+
+            if (array_key_exists('delivery_fee', $validated)) {
+                $updates['delivery_fee'] = (float) ($validated['delivery_fee'] ?? 0);
+            }
+
+            if (array_key_exists('items', $validated)) {
+                $updates['items_text'] = trim((string) $validated['items']);
+            }
+
+            if (array_key_exists('status', $validated)) {
+                $newStatus = $validated['status'];
+                $updates['status'] = $newStatus;
+
+                if ($newStatus !== $oldStatus) {
+                    $updates['status_changed_at'] = now();
+                }
+            }
+
+            if ($updates !== []) {
+                $order->update($updates);
+            }
+
+            if (array_key_exists('status', $validated) && $validated['status'] !== $oldStatus) {
+                $this->recordOrderStatusChange(
+                    $order,
+                    $validated['status'],
+                    trim((string) ($validated['status_note'] ?? '')) ?: 'تحديث الحالة عبر API',
+                    'api'
+                );
+            }
+        });
+
+        $order->refresh()->load(['items', 'customer', 'statusHistories' => fn ($query) => $query->orderBy('created_at')]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم تحديث الطلب بنجاح.',
+            'data'    => $this->transformOrderForApi($order),
+        ]);
     }
 
     #[OA\Get(
@@ -1420,7 +1628,7 @@ class AuthController extends Controller
             ),
             new OA\Parameter(
                 name: 'include_closed',
-                description: 'Set to 1 to include cancelled and delivered orders (only applies to phone search)',
+                description: 'Set to 1 to include cancelled (ملغي) and completed (مكتمل) orders (only applies to phone search)',
                 in: 'query',
                 required: false,
                 schema: new OA\Schema(type: 'integer', enum: [0, 1], example: 0)
@@ -1430,18 +1638,13 @@ class AuthController extends Controller
             new OA\Response(
                 response: 200,
                 description: 'Order status fetched successfully',
-                content: new OA\JsonContent(
-                    properties: [
-                        new OA\Property(property: 'success', type: 'boolean', example: true),
-                        new OA\Property(property: 'found', type: 'boolean', example: true),
-                        new OA\Property(property: 'latest_status', type: 'string', nullable: true, example: 'طلب جديد'),
-                        new OA\Property(property: 'count', type: 'integer', example: 2),
-                        new OA\Property(property: 'latest_order', type: 'object', nullable: true),
-                        new OA\Property(property: 'orders', type: 'array', items: new OA\Items(type: 'object')),
-                    ]
-                )
+                content: new OA\JsonContent(ref: '#/components/schemas/OrderStatusSearchResponse')
             ),
-            new OA\Response(response: 422, description: 'Validation error'),
+            new OA\Response(
+                response: 422,
+                description: 'Validation error — provide order_number, customer_name, or phone',
+                content: new OA\JsonContent(ref: '#/components/schemas/ApiErrorResponse')
+            ),
         ]
     )]
     public function apiOrderStatusByPhone(Request $request): JsonResponse
@@ -1465,14 +1668,14 @@ class AuthController extends Controller
             ], 422);
         }
 
-        $ordersQuery = Order::query()->with('items');
+        $ordersQuery = Order::query()->with(['items', 'customer', 'statusHistories' => fn ($query) => $query->orderBy('created_at')]);
 
         if ($orderNumber) {
             $ordersQuery->where('order_number', $orderNumber);
         } elseif ($customerName !== '') {
             $ordersQuery->where('customer_name', 'like', '%'.$customerName.'%');
         } else {
-            $ordersQuery->where('phone', $phone);
+            $this->applyPhoneFilterToOrdersQuery($ordersQuery, $phone);
 
             if (! $includeClosed) {
                 $ordersQuery->whereNotIn('status', Order::CLOSED_STATUSES);
@@ -1513,16 +1716,13 @@ class AuthController extends Controller
             new OA\Response(
                 response: 200,
                 description: 'Orders fetched successfully',
-                content: new OA\JsonContent(
-                    properties: [
-                        new OA\Property(property: 'success', type: 'boolean', example: true),
-                        new OA\Property(property: 'phone', type: 'string', example: '96550000000'),
-                        new OA\Property(property: 'count', type: 'integer', example: 2),
-                        new OA\Property(property: 'orders', type: 'array', items: new OA\Items(type: 'object')),
-                    ]
-                )
+                content: new OA\JsonContent(ref: '#/components/schemas/OrdersByPhoneResponse')
             ),
-            new OA\Response(response: 422, description: 'حقل phone مطلوب'),
+            new OA\Response(
+                response: 422,
+                description: 'حقل phone مطلوب',
+                content: new OA\JsonContent(ref: '#/components/schemas/ApiErrorResponse')
+            ),
         ]
     )]
     public function apiOrdersByPhone(Request $request): JsonResponse
@@ -1533,12 +1733,13 @@ class AuthController extends Controller
 
         $phone = trim((string) $request->query('phone'));
 
-        $orders = Order::query()
-            ->with('items')
-            ->where('phone', $phone)
-            ->whereNotIn('status', Order::CLOSED_STATUSES)
-            ->latest()
-            ->get();
+        $ordersQuery = Order::query()
+            ->with(['items', 'customer', 'statusHistories' => fn ($query) => $query->orderBy('created_at')])
+            ->whereNotIn('status', Order::CLOSED_STATUSES);
+
+        $this->applyPhoneFilterToOrdersQuery($ordersQuery, $phone);
+
+        $orders = $ordersQuery->latest()->get();
 
         $items = $orders->map(fn (Order $order) => $this->transformOrderForApi($order))->values();
 
@@ -2709,24 +2910,52 @@ class AuthController extends Controller
     private function transformOrderForApi(Order $order): array
     {
         $itemsText = trim((string) ($order->items_text ?? ''));
-        if ($itemsText === '' && $order->relationLoaded('items')) {
-            $itemsText = $order->items
-                ->map(fn (OrderItem $item) => $item->product_title.' x'.$item->quantity)
-                ->implode(' + ');
+        $lineItems = [];
+
+        if ($order->relationLoaded('items') && $order->items->isNotEmpty()) {
+            $lineItems = $order->items->map(fn (OrderItem $item) => [
+                'product_id'    => $item->product_id,
+                'product_title' => $item->product_title,
+                'unit_price'    => (float) $item->unit_price,
+                'quantity'      => (int) $item->quantity,
+                'line_total'    => (float) $item->line_total,
+            ])->values()->all();
+
+            if ($itemsText === '') {
+                $itemsText = $order->items
+                    ->map(fn (OrderItem $item) => $item->product_title.' x'.$item->quantity)
+                    ->implode(' + ');
+            }
         }
 
+        $statusHistories = $order->relationLoaded('statusHistories')
+            ? $order->statusHistories->sortBy('created_at')->values()->map(fn (OrderStatusHistory $history) => [
+                'status'     => $history->status,
+                'note'       => $history->note,
+                'changed_by' => $history->changed_by,
+                'created_at' => optional($history->created_at)?->toISOString(),
+            ])->all()
+            : [];
+
         return [
-            'id'               => $order->id,
-            'order_number'     => $order->order_number,
-            'remote_jid'       => $order->remote_jid,
-            'customer_name'    => $order->customer_name,
-            'phone'            => $order->phone,
-            'delivery_address' => $order->delivery_address,
-            'status'           => $order->status,
-            'total_amount'     => (float) $order->total_amount,
-            'items'            => $itemsText,
-            'created_at'       => optional($order->created_at)?->toISOString(),
-            'updated_at'       => optional($order->updated_at)?->toISOString(),
+            'id'                 => $order->id,
+            'order_number'       => $order->order_number,
+            'remote_jid'         => $order->remote_jid,
+            'customer_name'      => $order->displayCustomerName() !== '—' ? $order->displayCustomerName() : null,
+            'phone'              => $order->displayPhone() !== '—' ? $order->displayPhone() : null,
+            'delivery_address'   => $order->displayAddress() !== '—' ? $order->displayAddress() : null,
+            'status'             => $order->status,
+            'available_statuses' => Order::STATUSES,
+            'status_changed_at'  => optional($order->status_changed_at)?->toISOString(),
+            'subtotal'           => $order->itemsSubtotal(),
+            'delivery_fee'       => (float) $order->delivery_fee,
+            'grand_total'        => $order->grandTotal(),
+            'total_amount'       => $order->grandTotal(),
+            'items'              => $itemsText,
+            'line_items'         => $lineItems,
+            'status_history'     => $statusHistories,
+            'created_at'         => optional($order->created_at)?->toISOString(),
+            'updated_at'         => optional($order->updated_at)?->toISOString(),
         ];
     }
 

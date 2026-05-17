@@ -178,7 +178,6 @@
             <nav class="nav">
                 <a class="{{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">الرئيسية</a>
                 <a class="{{ request()->routeIs('customers.*') ? 'active' : '' }}" href="{{ route('customers.index') }}">المستخدمين</a>
-                <a class="{{ request()->routeIs('campaigns.*') ? 'active' : '' }}" href="{{ route('campaigns.index') }}">حملات إعلانية</a>
                 <a class="{{ request()->routeIs('products.*') ? 'active' : '' }}" href="{{ route('products.index') }}">المنتجات</a>
                 <a class="{{ request()->routeIs('orders.*') ? 'active' : '' }}" href="{{ route('orders.index') }}">الطلبات</a>
                 <a class="{{ request()->routeIs('branches.*') ? 'active' : '' }}" href="{{ route('branches.index') }}">الفروع</a>
@@ -190,14 +189,19 @@
                     <a class="{{ request()->routeIs('settings.*') ? 'active' : '' }}" href="{{ route('settings.index') }}">الإعدادات</a>
                     <a class="{{ request()->routeIs('categories.*') ? 'active' : '' }}" href="{{ route('categories.index') }}">الفئات</a>
                     <a class="{{ request()->routeIs('diseases.*') ? 'active' : '' }}" href="{{ route('diseases.index') }}">الاستخدامات</a>
-                    <a class="{{ request()->routeIs('conversations.*') ? 'active' : '' }}" href="{{ route('conversations.index') }}">المحادثات</a>
-                    @php
-                        $appBaseUrl = rtrim((string) config('app.url', url('/')), '/');
-                        $telescopePath = trim((string) config('telescope.path', 'telescope'), '/');
-                    @endphp
+                </div>
+
+                @php
+                    $appBaseUrl = rtrim((string) config('app.url', url('/')), '/');
+                    $telescopePath = trim((string) config('telescope.path', 'telescope'), '/');
+                @endphp
+                <div class="nav-group">
+                    <span class="nav-group-title">debug</span>
                     <a class="{{ request()->is('api/documentation*') ? 'active' : '' }}" href="{{ $appBaseUrl.'/api/documentation' }}" target="_blank" rel="noopener noreferrer">Swagger</a>
                     <a class="{{ request()->is('telescope*') ? 'active' : '' }}" href="{{ $appBaseUrl.'/'.($telescopePath !== '' ? $telescopePath : 'telescope') }}" target="_blank" rel="noopener noreferrer">Laravel Telescope</a>
                     <a href="https://n8n.marketlink.app/" target="_blank" rel="noopener noreferrer">n8n Workflow</a>
+                    <a class="{{ request()->routeIs('campaigns.*') ? 'active' : '' }}" href="{{ route('campaigns.index') }}">حملات إعلانية</a>
+                    <a class="{{ request()->routeIs('conversations.*') ? 'active' : '' }}" href="{{ route('conversations.index') }}">المحادثات</a>
                 </div>
             </nav>
         </aside>

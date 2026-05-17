@@ -75,14 +75,29 @@ class Order extends Model
     {
         $phone = $this->customer?->phone ?? $this->phone;
 
-        return $phone !== null && trim($phone) !== '' ? trim($phone) : '—';
+        if ($phone !== null && trim($phone) !== '') {
+            return trim($phone);
+        }
+
+        if ($this->remote_jid) {
+            $fromJid = (string) preg_replace('/@[^@]+$/', '', $this->remote_jid);
+
+            if (trim($fromJid) !== '') {
+                return trim($fromJid);
+            }
+        }
+
+        return '—';
     }
 
     public function displayAddress(): string
     {
-        $address = $this->customer?->address ?? $this->delivery_address;
+        $customerAddress = trim((string) ($this->customer?->address ?? ''));
+        $orderAddress = trim((string) ($this->delivery_address ?? ''));
 
-        return $address !== null && trim($address) !== '' ? trim($address) : '—';
+        $address = $customerAddress !== '' ? $customerAddress : $orderAddress;
+
+        return $address !== '' ? $address : '—';
     }
 
     public function itemsSubtotal(): float
