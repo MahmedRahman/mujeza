@@ -28,6 +28,10 @@ use OpenApi\Attributes as OA;
 
 class AuthController extends Controller
 {
+    private const AUTO_REPLY_GLOBAL_KEY = 'whatsapp_auto_reply_global_enabled';
+
+    private const AUTO_REPLY_CHAT_OVERRIDES_KEY = 'whatsapp_auto_reply_chat_overrides';
+
     public function showLogin(): View
     {
         return view('auth.login');
@@ -2265,6 +2269,114 @@ class AuthController extends Controller
         ));
     }
 
+    #[OA\Patch(
+        path: '/api/customers/auto-reply/global',
+        operationId: 'updateGlobalCustomerAutoReply',
+        tags: ['Customers'],
+        summary: 'تغيير الإعداد العام للرد التلقائي',
+        description: 'يُفعّل أو يُوقف الرد التلقائي على مستوى النظام لجميع المحادثات التي ليس لها override خاص.',
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(ref: '#/components/schemas/AutoReplyToggleRequest')
+        ),
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'تم تحديث الإعداد العام',
+                content: new OA\JsonContent(ref: '#/components/schemas/GlobalAutoReplyResponse')
+            ),
+            new OA\Response(
+                response: 422,
+                description: 'Validation error',
+                content: new OA\JsonContent(ref: '#/components/schemas/ApiErrorResponse')
+            ),
+        ]
+    )]
+    public function apiUpdateGlobalAutoReply(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'enabled' => ['required', 'boolean'],
+        ]);
+
+        $enabled = (bool) $validated['enabled'];
+
+        Setting::query()->updateOrCreate(
+            ['key' => self::AUTO_REPLY_GLOBAL_KEY],
+            ['value' => $enabled ? '1' : '0']
+        );
+
+        return response()->json([
+            'success'           => true,
+            'message'           => 'تم تحديث الإعداد العام للرد التلقائي.',
+            'global_auto_reply' => $enabled,
+        ]);
+    }
+
+    #[OA\Patch(
+        path: '/api/customers/auto-reply',
+        operationId: 'updateCustomerAutoReply',
+        tags: ['Customers'],
+        summary: 'تغيير الرد التلقائي لعميل بـ remoteJid',
+        description: 'يُحدّد override للرد التلقائي لهذه المحادثة. أرسل remote_jid كـ query parameter أو في body. إذا كانت enabled مطابقة للإعداد العام يُزال الـ override.',
+        parameters: [
+            new OA\Parameter(
+                name: 'remote_jid',
+                description: 'معرّف واتساب للعميل (يمكن إرساله في body بدلاً من query)',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'string', example: '96550000000@s.whatsapp.net')
+            ),
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(ref: '#/components/schemas/CustomerAutoReplyRequest')
+        ),
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'تم تحديث الرد التلقائي للعميل',
+                content: new OA\JsonContent(ref: '#/components/schemas/CustomerAutoReplyResponse')
+            ),
+            new OA\Response(
+                response: 404,
+                description: 'Customer not found',
+                content: new OA\JsonContent(ref: '#/components/schemas/ApiErrorResponse')
+            ),
+            new OA\Response(
+                response: 422,
+                description: 'Validation error',
+                content: new OA\JsonContent(ref: '#/components/schemas/ApiErrorResponse')
+            ),
+        ]
+    )]
+    public function apiUpdateCustomerAutoReply(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'remote_jid' => ['required', 'string', 'max:255'],
+            'enabled'      => ['required', 'boolean'],
+        ]);
+
+        $remoteJid = trim((string) $validated['remote_jid']);
+
+        $customer = Customer::query()->find($remoteJid);
+
+        if (! $customer) {
+            return response()->json([
+                'success' => false,
+                'message' => 'المستخدم غير موجود.',
+            ], 404);
+        }
+
+        $enabled = (bool) $validated['enabled'];
+        $status  = $this->persistChatAutoReply($remoteJid, $enabled);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم تحديث الرد التلقائي للعميل.',
+            ...$status,
+        ]);
+    }
+
     #[OA\Get(
         path: '/api/customers',
         operationId: 'getCustomers',
@@ -2802,10 +2914,10 @@ class AuthController extends Controller
 
     private function loadAutoReplySettings(): array
     {
-        $globalRaw = (string) (Setting::query()->where('key', 'whatsapp_auto_reply_global_enabled')->value('value') ?? '1');
+        $globalRaw = (string) (Setting::query()->where('key', self::AUTO_REPLY_GLOBAL_KEY)->value('value') ?? '1');
         $global    = in_array(strtolower($globalRaw), ['1', 'true', 'on', 'yes'], true);
 
-        $overridesRaw = Setting::query()->where('key', 'whatsapp_auto_reply_chat_overrides')->value('value');
+        $overridesRaw = Setting::query()->where('key', self::AUTO_REPLY_CHAT_OVERRIDES_KEY)->value('value');
         $overrides    = [];
         if (is_string($overridesRaw) && trim($overridesRaw) !== '') {
             $decoded = json_decode($overridesRaw, true);
@@ -2815,6 +2927,36 @@ class AuthController extends Controller
         }
 
         return ['global' => $global, 'overrides' => $overrides];
+    }
+
+    /**
+     * @return array{remote_jid: string, global_auto_reply: bool, auto_reply: bool, auto_reply_overridden: bool}
+     */
+    private function persistChatAutoReply(string $remoteJid, bool $enabled): array
+    {
+        $settings  = $this->loadAutoReplySettings();
+        $global    = $settings['global'];
+        $overrides = $settings['overrides'];
+
+        if ($enabled === $global) {
+            unset($overrides[$remoteJid]);
+            $overridden = false;
+        } else {
+            $overrides[$remoteJid] = $enabled;
+            $overridden              = true;
+        }
+
+        Setting::query()->updateOrCreate(
+            ['key' => self::AUTO_REPLY_CHAT_OVERRIDES_KEY],
+            ['value' => json_encode($overrides, JSON_UNESCAPED_UNICODE)]
+        );
+
+        return [
+            'remote_jid'            => $remoteJid,
+            'global_auto_reply'     => $global,
+            'auto_reply'            => $enabled,
+            'auto_reply_overridden' => $overridden,
+        ];
     }
 
     private function transformCustomerForApi(Customer $customer, array $autoReply = [], bool $includeName = true): array

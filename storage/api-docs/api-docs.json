@@ -928,6 +928,112 @@
                 }
             }
         },
+        "/api/customers/auto-reply/global": {
+            "patch": {
+                "tags": [
+                    "Customers"
+                ],
+                "summary": "تغيير الإعداد العام للرد التلقائي",
+                "description": "يُفعّل أو يُوقف الرد التلقائي على مستوى النظام لجميع المحادثات التي ليس لها override خاص.",
+                "operationId": "updateGlobalCustomerAutoReply",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AutoReplyToggleRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "تم تحديث الإعداد العام",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GlobalAutoReplyResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/customers/auto-reply": {
+            "patch": {
+                "tags": [
+                    "Customers"
+                ],
+                "summary": "تغيير الرد التلقائي لعميل بـ remoteJid",
+                "description": "يُحدّد override للرد التلقائي لهذه المحادثة. أرسل remote_jid كـ query parameter أو في body. إذا كانت enabled مطابقة للإعداد العام يُزال الـ override.",
+                "operationId": "updateCustomerAutoReply",
+                "parameters": [
+                    {
+                        "name": "remote_jid",
+                        "in": "query",
+                        "description": "معرّف واتساب للعميل (يمكن إرساله في body بدلاً من query)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "96550000000@s.whatsapp.net"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CustomerAutoReplyRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "تم تحديث الرد التلقائي للعميل",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CustomerAutoReplyResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Customer not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/customers": {
             "get": {
                 "tags": [
@@ -1601,6 +1707,84 @@
                     },
                     "data": {
                         "$ref": "#/components/schemas/Customer"
+                    }
+                },
+                "type": "object"
+            },
+            "AutoReplyToggleRequest": {
+                "required": [
+                    "enabled"
+                ],
+                "properties": {
+                    "enabled": {
+                        "description": "true = تفعيل الرد التلقائي، false = إيقافه",
+                        "type": "boolean",
+                        "example": true
+                    }
+                },
+                "type": "object"
+            },
+            "CustomerAutoReplyRequest": {
+                "required": [
+                    "remote_jid",
+                    "enabled"
+                ],
+                "properties": {
+                    "remote_jid": {
+                        "type": "string",
+                        "example": "96550000000@s.whatsapp.net"
+                    },
+                    "enabled": {
+                        "description": "true = تفعيل الرد التلقائي، false = إيقافه",
+                        "type": "boolean",
+                        "example": false
+                    }
+                },
+                "type": "object"
+            },
+            "GlobalAutoReplyResponse": {
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "تم تحديث الإعداد العام للرد التلقائي."
+                    },
+                    "global_auto_reply": {
+                        "type": "boolean",
+                        "example": true
+                    }
+                },
+                "type": "object"
+            },
+            "CustomerAutoReplyResponse": {
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "تم تحديث الرد التلقائي للعميل."
+                    },
+                    "remote_jid": {
+                        "type": "string",
+                        "example": "96550000000@s.whatsapp.net"
+                    },
+                    "global_auto_reply": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "auto_reply": {
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "auto_reply_overridden": {
+                        "description": "true إذا كانت القيمة مختلفة عن الإعداد العام",
+                        "type": "boolean",
+                        "example": true
                     }
                 },
                 "type": "object"
