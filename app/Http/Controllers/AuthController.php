@@ -605,10 +605,11 @@ class AuthController extends Controller
         $orders = $ordersQuery->latest()->get();
 
         return view('dashboard.orders', [
-            'orders'       => $orders,
-            'customerName' => $customerName,
-            'phone'        => $phone,
-            'hasFilters'   => $customerName !== '' || $phone !== '',
+            'orders'            => $orders,
+            'customerName'      => $customerName,
+            'phone'             => $phone,
+            'hasFilters'        => $customerName !== '' || $phone !== '',
+            'totalOrdersCount'  => Order::query()->count(),
         ]);
     }
 
@@ -1004,6 +1005,27 @@ class AuthController extends Controller
         return redirect()
             ->route('orders.index')
             ->with('success', 'تم حذف الطلب بنجاح.');
+    }
+
+    public function destroyAllOrders(): RedirectResponse
+    {
+        $count = Order::query()->count();
+
+        if ($count === 0) {
+            return redirect()
+                ->route('orders.index')
+                ->with('success', 'لا توجد طلبات للحذف.');
+        }
+
+        DB::transaction(function () {
+            OrderItem::query()->delete();
+            OrderStatusHistory::query()->delete();
+            Order::query()->delete();
+        });
+
+        return redirect()
+            ->route('orders.index')
+            ->with('success', 'تم حذف جميع الطلبات بنجاح.');
     }
 
     public function showOrder(Order $order): View

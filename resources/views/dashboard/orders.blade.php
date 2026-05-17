@@ -10,10 +10,25 @@
             من هنا تتابع كل الطلبات وتطلع على الفاتورة.
         </p>
 
+        @if (session('success'))
+            <p style="margin:0 0 16px; padding:12px 14px; border-radius:8px; background:#ecfdf5; color:#047857; border:1px solid #a7f3d0; font-weight:700;">
+                {{ session('success') }}
+            </p>
+        @endif
+
         <div style="display:flex; gap:12px; align-items:center; margin-bottom:20px; flex-wrap:wrap;">
             <a href="{{ route('orders.create') }}" style="display:inline-block; text-decoration:none; border:none; background:#d4af37; color:#111827; padding:10px 18px; border-radius:8px; font-weight:700;">
                 + إنشاء طلب جديد
             </a>
+            @if (($totalOrdersCount ?? 0) > 0)
+                <form method="POST" action="{{ route('orders.destroy-all') }}" onsubmit="return confirm('هل أنت متأكد من حذف جميع الطلبات في النظام؟\n\nسيتم حذف {{ $totalOrdersCount }} طلب نهائياً ولا يمكن التراجع عن هذا الإجراء.')">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" style="border:1px solid #fecaca; background:#fff1f2; color:#b91c1c; padding:10px 18px; border-radius:8px; font-weight:800; font-family:inherit; cursor:pointer;">
+                        حذف كل الطلبات
+                    </button>
+                </form>
+            @endif
         </div>
 
         <form method="GET" action="{{ route('orders.index') }}" style="margin-bottom:20px; display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
@@ -63,11 +78,11 @@
                     <thead>
                         <tr style="background: #f8f2de;">
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">رقم الطلب</th>
+                            <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">تاريخ الإدخال</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">الاسم</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">التليفون</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">العنوان</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">الحالة</th>
-                            <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">تاريخ الإدخال</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">الإجراءات</th>
                         </tr>
                     </thead>
@@ -76,6 +91,17 @@
                             <tr>
                                 <td style="padding: 10px; border: 1px solid #efe3b7; font-weight:700;">
                                     {{ $order->order_number }}
+                                </td>
+                                @php $enteredAt = $order->created_at ?? $order->updated_at; @endphp
+                                <td style="padding: 10px; border: 1px solid #efe3b7; font-weight:700; color:#374151; white-space:nowrap;">
+                                    @if ($enteredAt)
+                                        {{ $enteredAt->format('d/m/Y') }}
+                                        <div style="font-size:12px; font-weight:600; color:#6b7280;">
+                                            {{ $enteredAt->format('H:i') }} · {{ $enteredAt->diffForHumans() }}
+                                        </div>
+                                    @else
+                                        <span style="color:#9ca3af;">—</span>
+                                    @endif
                                 </td>
                                 <td style="padding: 10px; border: 1px solid #efe3b7; font-weight:600; white-space:nowrap;">
                                     @php $displayName = $order->displayCustomerName(); @endphp
@@ -122,12 +148,6 @@
                                     <span style="display:inline-block; padding:4px 10px; border-radius:20px; font-size:12px; font-weight:800; {{ $statusStyle }}">
                                         {{ $order->status }}
                                     </span>
-                                </td>
-                                <td style="padding: 10px; border: 1px solid #efe3b7; font-weight:700; color:#374151;">
-                                    {{ $order->created_at?->format('d/m/Y') ?? '—' }}
-                                    <div style="font-size:12px; font-weight:600; color:#6b7280;">
-                                        {{ $order->created_at?->diffForHumans() ?? '' }}
-                                    </div>
                                 </td>
                                 <td style="padding: 10px; border: 1px solid #efe3b7;">
                                     <div style="display:flex; gap:8px; flex-wrap:wrap;">

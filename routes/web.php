@@ -61,6 +61,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/orders/{order}/status', [AuthController::class, 'updateOrderStatus'])->name('orders.status');
     Route::put('/orders/{order}/notes', [AuthController::class, 'updateOrderNotes'])->name('orders.notes');
     Route::put('/orders/{order}/items', [AuthController::class, 'updateOrderItems'])->name('orders.items');
+    Route::delete('/orders/all', [AuthController::class, 'destroyAllOrders'])->name('orders.destroy-all');
     Route::delete('/orders/{order}', [AuthController::class, 'destroyOrder'])->name('orders.destroy');
     Route::get('/orders/{order}/invoice', [AuthController::class, 'invoiceOrder'])->name('orders.invoice');
     Route::get('/orders/{order}', [AuthController::class, 'showOrder'])->name('orders.show');
