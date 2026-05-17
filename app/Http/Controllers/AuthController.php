@@ -12,6 +12,7 @@ use App\Models\Product;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderStatusHistory;
+use App\Services\ConversationConversionService;
 use App\Services\DashboardAlertsService;
 use App\Models\Setting;
 use Illuminate\Http\JsonResponse;
@@ -66,13 +67,16 @@ class AuthController extends Controller
             ]);
     }
 
-    public function dashboard(DashboardAlertsService $dashboardAlerts): View
-    {
+    public function dashboard(
+        DashboardAlertsService $dashboardAlerts,
+        ConversationConversionService $conversion,
+    ): View {
         $alerts = $dashboardAlerts->build();
 
         return view('dashboard.home', [
             'alerts' => $alerts,
             'hasAlerts' => $dashboardAlerts->hasAlerts($alerts),
+            'conversion' => $conversion->summary(),
             'stats' => [
                 'products' => Product::query()->count(),
                 'available_products' => Product::query()->where('is_available', true)->count(),
@@ -572,23 +576,39 @@ class AuthController extends Controller
 
     public function orders(Request $request): View
     {
-        $q = trim((string) $request->query('q'));
+        $customerName = trim((string) $request->query('customer_name', ''));
+        $phone        = trim((string) $request->query('phone', ''));
 
-        $ordersQuery = Order::query();
-        if ($q !== '') {
-            $ordersQuery->where(function ($builder) use ($q) {
-                $builder->where('remote_jid', 'like', '%'.$q.'%')
-                    ->orWhere('customer_name', 'like', '%'.$q.'%')
-                    ->orWhere('phone', 'like', '%'.$q.'%')
-                    ->orWhere('order_number', 'like', '%'.$q.'%');
+        $ordersQuery = Order::query()->with('customer');
+
+        if ($customerName !== '') {
+            $ordersQuery->where(function ($builder) use ($customerName) {
+                $builder->where('customer_name', 'like', '%'.$customerName.'%')
+                    ->orWhereHas('customer', fn ($query) => $query->where('name', 'like', '%'.$customerName.'%'));
             });
         }
 
-        $orders = $ordersQuery->with('customer')->latest()->get();
+        if ($phone !== '') {
+            $ordersQuery->where(function ($builder) use ($phone) {
+                $this->applyPhoneFilterToOrdersQuery($builder, $phone);
+                $builder->orWhereHas('customer', function ($query) use ($phone) {
+                    $digits = preg_replace('/\D+/', '', $phone) ?? '';
+                    $query->where('phone', 'like', '%'.$phone.'%');
+                    if ($digits !== '') {
+                        $query->orWhere('phone', 'like', '%'.$digits.'%')
+                            ->orWhere('remote_jid', 'like', '%'.$digits.'%');
+                    }
+                });
+            });
+        }
+
+        $orders = $ordersQuery->latest()->get();
 
         return view('dashboard.orders', [
-            'orders' => $orders,
-            'q'      => $q,
+            'orders'       => $orders,
+            'customerName' => $customerName,
+            'phone'        => $phone,
+            'hasFilters'   => $customerName !== '' || $phone !== '',
         ]);
     }
 

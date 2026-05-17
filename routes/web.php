@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\WhatsAppController;
 use Illuminate\Support\Facades\Route;
 
@@ -80,6 +81,13 @@ Route::middleware('auth')->group(function () {
     Route::get('/settings', [AuthController::class, 'settings'])->name('settings.index');
     Route::post('/settings', [AuthController::class, 'updateSettings'])->name('settings.update');
     Route::get('/conversations', [AuthController::class, 'conversations'])->name('conversations.index');
+
+    Route::get('/reports/conversations-count', [ReportsController::class, 'conversationsCount'])->name('reports.conversations-count');
+    Route::get('/reports/orders-summary', [ReportsController::class, 'ordersSummary'])->name('reports.orders-summary');
+    Route::get('/reports/orders-by-status', [ReportsController::class, 'ordersByStatus'])->name('reports.orders-by-status');
+    Route::get('/reports/complaints-summary', [ReportsController::class, 'complaintsSummary'])->name('reports.complaints-summary');
+    Route::get('/reports/top-products', [ReportsController::class, 'topProducts'])->name('reports.top-products');
+    Route::get('/reports/top-asked-products', [ReportsController::class, 'topAskedProducts'])->name('reports.top-asked-products');
 
     // Evolution API proxy (WhatsApp Chat)
     Route::prefix('whatsapp')->name('whatsapp.')->group(function () {

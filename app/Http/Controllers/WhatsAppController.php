@@ -209,7 +209,7 @@ class WhatsAppController extends Controller
         $hasOverride = array_key_exists($chatId, $chatOverrides);
         $phone = $this->normalizeChatPhone($chatId);
         $name = $this->resolveChatName($c, $chatId, $phone);
-        $timestamp = (int) data_get($c, 'lastMessage.messageTimestamp', 0);
+        $timestamp = $this->normalizeMessageTimestamp(data_get($c, 'lastMessage.messageTimestamp', 0));
         $lastMessage = data_get($c, 'lastMessage.message.conversation')
             ?? data_get($c, 'lastMessage.message.extendedTextMessage.text')
             ?? '...';
@@ -431,6 +431,65 @@ class WhatsAppController extends Controller
             ->values();
 
         return response()->json($chats);
+    }
+
+    /**
+     * @return array{
+     *     error: string|null,
+     *     generated_at: \Illuminate\Support\Carbon,
+     *     chats: \Illuminate\Support\Collection<int, array<string, mixed>>
+     * }
+     */
+    public function getDirectChatsForReporting(): array
+    {
+        return Cache::remember('reports.direct_chats', 300, function () {
+            $cfg = $this->evoSettings();
+
+            if (! $cfg['url'] || ! $cfg['instance']) {
+                return [
+                    'error'        => 'واتساب غير مُعدّ — راجع الإعدادات.',
+                    'generated_at' => now(),
+                    'chats'        => collect(),
+                ];
+            }
+
+            try {
+                $response = $this->evoHttp($cfg)
+                    ->timeout(12)
+                    ->post("{$cfg['url']}/chat/findChats/{$cfg['instance']}", []);
+
+                if (! $response->successful()) {
+                    return [
+                        'error'        => 'تعذر جلب المحادثات من واتساب.',
+                        'generated_at' => now(),
+                        'chats'        => collect(),
+                    ];
+                }
+
+                $raw = $response->json();
+                if (isset($raw['chats'])) {
+                    $raw = $raw['chats'];
+                }
+
+                $chats = $this->buildChatsCollection(
+                    (array) $raw,
+                    $this->autoReplyGlobalEnabled(),
+                    $this->autoReplyChatOverrides()
+                )->values();
+
+                return [
+                    'error'        => null,
+                    'generated_at' => now(),
+                    'chats'        => $chats,
+                ];
+            } catch (\Throwable) {
+                return [
+                    'error'        => 'تعذر الاتصال بخادم واتساب.',
+                    'generated_at' => now(),
+                    'chats'        => collect(),
+                ];
+            }
+        });
     }
 
     /**

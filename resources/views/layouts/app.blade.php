@@ -191,6 +191,16 @@
                     <a class="{{ request()->routeIs('diseases.*') ? 'active' : '' }}" href="{{ route('diseases.index') }}">الاستخدامات</a>
                 </div>
 
+                <div class="nav-group">
+                    <span class="nav-group-title">التقارير</span>
+                    <a class="{{ request()->routeIs('reports.conversations-count') ? 'active' : '' }}" href="{{ route('reports.conversations-count') }}">عدد المحادثات</a>
+                    <a class="{{ request()->routeIs('reports.orders-summary') ? 'active' : '' }}" href="{{ route('reports.orders-summary') }}">عدد الطلبات وقيمتها</a>
+                    <a class="{{ request()->routeIs('reports.orders-by-status') ? 'active' : '' }}" href="{{ route('reports.orders-by-status') }}">الطلبات حسب الحالة</a>
+                    <a class="{{ request()->routeIs('reports.complaints-summary') ? 'active' : '' }}" href="{{ route('reports.complaints-summary') }}">عدد الشكاوى ونسبة المحلولة</a>
+                    <a class="{{ request()->routeIs('reports.top-products') ? 'active' : '' }}" href="{{ route('reports.top-products') }}">أكثر 5 منتجات طلباً</a>
+                    <a class="{{ request()->routeIs('reports.top-asked-products') ? 'active' : '' }}" href="{{ route('reports.top-asked-products') }}">أكثر 5 منتجات سؤالاً</a>
+                </div>
+
                 @php
                     $appBaseUrl = rtrim((string) config('app.url', url('/')), '/');
                     $telescopePath = trim((string) config('telescope.path', 'telescope'), '/');

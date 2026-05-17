@@ -155,12 +155,117 @@
             font-weight: 700;
             margin-bottom: 0;
         }
+        .conversion-section {
+            border: 2px solid #d4af37;
+            border-radius: 16px;
+            padding: 20px;
+            background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 45%, #fff7df 100%);
+            box-shadow: 0 10px 28px rgba(212, 175, 55, 0.18);
+        }
+        .conversion-section h3 {
+            margin: 0 0 4px;
+            font-size: 15px;
+            font-weight: 800;
+            color: #92400e;
+        }
+        .conversion-section .conversion-subtitle {
+            margin: 0 0 16px;
+            color: #6b7280;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .conversion-main {
+            display: flex;
+            align-items: flex-end;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 14px;
+        }
+        .conversion-rate {
+            font-size: 52px;
+            line-height: 1;
+            font-weight: 900;
+            color: #111827;
+        }
+        .conversion-rate-suffix {
+            font-size: 28px;
+            font-weight: 900;
+            color: #15803d;
+            margin-bottom: 6px;
+        }
+        .conversion-formula {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            font-size: 14px;
+            font-weight: 700;
+            color: #374151;
+        }
+        .conversion-pill {
+            background: rgba(255, 255, 255, 0.85);
+            border: 1px solid #efe3b7;
+            border-radius: 10px;
+            padding: 8px 12px;
+        }
+        .conversion-pill strong {
+            color: #111827;
+        }
+        .conversion-error {
+            background: #fff1f2;
+            color: #b91c1c;
+            border: 1px solid #fecaca;
+            border-radius: 10px;
+            padding: 10px 12px;
+            font-weight: 700;
+            font-size: 13px;
+            margin-bottom: 12px;
+        }
+        .conversion-meta {
+            margin-top: 12px;
+            font-size: 12px;
+            color: #9ca3af;
+            font-weight: 600;
+        }
     </style>
 
     <div class="dashboard-wrap">
         <section class="dashboard-hero">
             <h2>نظرة عامة على الأداء</h2>
             <p>متابعة سريعة لحالة المنتجات والطلبات والشكاوى والبيانات الأساسية في النظام.</p>
+        </section>
+
+        <section class="conversion-section">
+            <h3>نسبة تحويل المحادثة إلى طلب</h3>
+            <p class="conversion-subtitle">
+                {{ $conversion['period']['label'] }} (من {{ $conversion['period']['from_label'] }}) — الطلبات غير الملغية ÷ المحادثات الفردية النشطة
+            </p>
+
+            @if ($conversion['error'])
+                <div class="conversion-error">{{ $conversion['error'] }}</div>
+            @endif
+
+            <div class="conversion-main">
+                @if ($conversion['conversion_rate'] !== null)
+                    <span class="conversion-rate">{{ number_format($conversion['conversion_rate'], 1) }}</span>
+                    <span class="conversion-rate-suffix">%</span>
+                @else
+                    <span class="conversion-rate" style="font-size:32px; color:#6b7280;">—</span>
+                @endif
+            </div>
+
+            <div class="conversion-formula">
+                <span class="conversion-pill"><strong>{{ number_format($conversion['orders_count']) }}</strong> طلب</span>
+                <span>÷</span>
+                <span class="conversion-pill"><strong>{{ number_format($conversion['conversations_count']) }}</strong> محادثة</span>
+                <span>× 100</span>
+            </div>
+
+            @if ($conversion['generated_at'])
+                <p class="conversion-meta">
+                    آخر تحديث للمحادثات: {{ $conversion['generated_at']->format('d/m/Y H:i') }}
+                </p>
+            @endif
         </section>
 
         <section class="alerts-section">

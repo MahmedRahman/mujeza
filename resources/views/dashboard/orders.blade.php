@@ -10,12 +10,53 @@
             من هنا تتابع كل الطلبات وتطلع على الفاتورة.
         </p>
 
-        <a href="{{ route('orders.create') }}" style="display:inline-block; margin-bottom: 14px; text-decoration:none; border:none; background:#d4af37; color:#111827; padding:10px 18px; border-radius:8px; font-weight:700;">
-            + إنشاء طلب جديد
-        </a>
+        <div style="display:flex; gap:12px; align-items:center; margin-bottom:20px; flex-wrap:wrap;">
+            <a href="{{ route('orders.create') }}" style="display:inline-block; text-decoration:none; border:none; background:#d4af37; color:#111827; padding:10px 18px; border-radius:8px; font-weight:700;">
+                + إنشاء طلب جديد
+            </a>
+        </div>
+
+        <form method="GET" action="{{ route('orders.index') }}" style="margin-bottom:20px; display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+            <div>
+                <label for="customer_name" style="display:block; font-size:13px; font-weight:700; color:#374151; margin-bottom:6px;">اسم العميل</label>
+                <input
+                    id="customer_name"
+                    name="customer_name"
+                    type="text"
+                    value="{{ $customerName ?? '' }}"
+                    placeholder="مثال: محمد أحمد"
+                    style="width:220px; max-width:100%; border:1px solid #d1d5db; border-radius:8px; padding:10px; font-family:inherit;"
+                >
+            </div>
+            <div>
+                <label for="phone" style="display:block; font-size:13px; font-weight:700; color:#374151; margin-bottom:6px;">رقم التليفون</label>
+                <input
+                    id="phone"
+                    name="phone"
+                    type="text"
+                    value="{{ $phone ?? '' }}"
+                    placeholder="مثال: 96550000000"
+                    style="width:200px; max-width:100%; border:1px solid #d1d5db; border-radius:8px; padding:10px; font-family:inherit;"
+                >
+            </div>
+            <button type="submit" style="border:none; background:#d4af37; color:#111827; padding:10px 18px; border-radius:8px; font-weight:800; font-family:inherit; cursor:pointer;">
+                بحث
+            </button>
+            @if ($hasFilters ?? false)
+                <a href="{{ route('orders.index') }}" style="display:inline-block; text-decoration:none; border:1px solid #d1d5db; background:#fff; color:#111827; padding:10px 14px; border-radius:8px; font-weight:800;">
+                    إلغاء البحث
+                </a>
+            @endif
+        </form>
 
         @if ($orders->isEmpty())
-            <p style="margin:0; color:#6b7280;">لا توجد طلبات بعد.</p>
+            <p style="margin:0; color:#6b7280;">
+                @if ($hasFilters ?? false)
+                    لا توجد طلبات مطابقة لبحثك.
+                @else
+                    لا توجد طلبات بعد.
+                @endif
+            </p>
         @else
             <div style="overflow-x:auto;">
                 <table style="width: 100%; border-collapse: collapse; min-width: 600px;">
@@ -23,6 +64,7 @@
                         <tr style="background: #f8f2de;">
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">رقم الطلب</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">الاسم</th>
+                            <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">التليفون</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">العنوان</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">الحالة</th>
                             <th style="padding: 10px; border: 1px solid #efe3b7; text-align:right;">تاريخ الإدخال</th>
@@ -36,13 +78,22 @@
                                     {{ $order->order_number }}
                                 </td>
                                 <td style="padding: 10px; border: 1px solid #efe3b7; font-weight:600; white-space:nowrap;">
-                                    @if ($order->customer)
+                                    @php $displayName = $order->displayCustomerName(); @endphp
+                                    @if ($order->customer && $displayName !== '—')
                                         <a href="{{ route('customers.edit', $order->customer->remote_jid) }}"
                                            style="text-decoration:none; color:#92400e;">
-                                            {{ $order->customer->name }}
+                                            {{ $displayName }}
                                         </a>
-                                    @elseif ($order->customer_name)
-                                        <span style="color:#374151;">{{ $order->customer_name }}</span>
+                                    @elseif ($displayName !== '—')
+                                        <span style="color:#374151;">{{ $displayName }}</span>
+                                    @else
+                                        <span style="color:#9ca3af;">—</span>
+                                    @endif
+                                </td>
+                                <td style="padding: 10px; border: 1px solid #efe3b7; font-weight:600; white-space:nowrap; direction:ltr; text-align:right;">
+                                    @php $displayPhone = $order->displayPhone(); @endphp
+                                    @if ($displayPhone !== '—')
+                                        <span style="font-family:monospace; color:#374151;">{{ $displayPhone }}</span>
                                     @else
                                         <span style="color:#9ca3af;">—</span>
                                     @endif
