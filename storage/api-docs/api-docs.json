@@ -22,7 +22,7 @@
                     "Products"
                 ],
                 "summary": "Get products list",
-                "description": "Returns all products in one response.",
+                "description": "Returns all products in one response. Each item includes is_available (متاح).",
                 "operationId": "getProducts",
                 "responses": {
                     "200": {
@@ -30,19 +30,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
-                                        },
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "type": "object"
-                                            }
-                                        }
-                                    },
-                                    "type": "object"
+                                    "$ref": "#/components/schemas/ProductListResponse"
                                 }
                             }
                         }
@@ -56,7 +44,7 @@
                     "Products"
                 ],
                 "summary": "Search products by name",
-                "description": "Searches products using product title or description (partial match).",
+                "description": "Searches products using product title or description (partial match). Each item includes is_available (متاح).",
                 "operationId": "searchProductsByName",
                 "parameters": [
                     {
@@ -86,33 +74,20 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
-                                        },
-                                        "query": {
-                                            "type": "string",
-                                            "example": "سدر"
-                                        },
-                                        "count": {
-                                            "type": "integer",
-                                            "example": 2
-                                        },
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "type": "object"
-                                            }
-                                        }
-                                    },
-                                    "type": "object"
+                                    "$ref": "#/components/schemas/ProductSearchResponse"
                                 }
                             }
                         }
                     },
                     "422": {
-                        "description": "Validation error"
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrorResponse"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -143,33 +118,20 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
-                                        },
-                                        "disease": {
-                                            "type": "string",
-                                            "example": "السكري"
-                                        },
-                                        "count": {
-                                            "type": "integer",
-                                            "example": 3
-                                        },
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "type": "object"
-                                            }
-                                        }
-                                    },
-                                    "type": "object"
+                                    "$ref": "#/components/schemas/ProductSearchByDiseaseResponse"
                                 }
                             }
                         }
                     },
                     "422": {
-                        "description": "حقل disease مطلوب"
+                        "description": "حقل disease مطلوب",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrorResponse"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -2177,6 +2139,182 @@
                         "description": "مثال على الصيغة الصحيحة",
                         "type": "object",
                         "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "Product": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 12
+                    },
+                    "title": {
+                        "type": "string",
+                        "example": "عسل سدر"
+                    },
+                    "price": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 25
+                    },
+                    "discount_price": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 20,
+                        "nullable": true
+                    },
+                    "is_available": {
+                        "description": "متاح — true = متاح، false = غير متاح",
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "description": {
+                        "type": "string",
+                        "example": "عسل سدر طبيعي"
+                    },
+                    "benefits": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "example": [
+                            "يدعم المناعة"
+                        ]
+                    },
+                    "diseases": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "example": [
+                            "السكري"
+                        ]
+                    },
+                    "usage_methods": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "example": [
+                            "ملعقة صباحاً"
+                        ]
+                    },
+                    "sizes": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "example": [
+                            "500جم"
+                        ]
+                    },
+                    "cover_image": {
+                        "type": "string",
+                        "example": "products/cover.jpg",
+                        "nullable": true
+                    },
+                    "cover_image_url": {
+                        "type": "string",
+                        "example": "https://app.taheelplus.com/storage/products/cover.jpg",
+                        "nullable": true
+                    },
+                    "gallery_images": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "gallery_image_urls": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "primary_gallery_image": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "primary_gallery_image_url": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "promo_videos": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "ProductListResponse": {
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "data": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Product"
+                        }
+                    }
+                },
+                "type": "object"
+            },
+            "ProductSearchResponse": {
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "query": {
+                        "type": "string",
+                        "example": "سدر"
+                    },
+                    "count": {
+                        "type": "integer",
+                        "example": 2
+                    },
+                    "data": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Product"
+                        }
+                    }
+                },
+                "type": "object"
+            },
+            "ProductSearchByDiseaseResponse": {
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "disease": {
+                        "type": "string",
+                        "example": "السكري"
+                    },
+                    "count": {
+                        "type": "integer",
+                        "example": 3
+                    },
+                    "data": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Product"
+                        }
                     }
                 },
                 "type": "object"

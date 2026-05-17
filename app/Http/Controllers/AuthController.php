@@ -1179,21 +1179,12 @@ class AuthController extends Controller
         operationId: 'getProducts',
         tags: ['Products'],
         summary: 'Get products list',
-        description: 'Returns all products in one response.',
+        description: 'Returns all products in one response. Each item includes is_available (متاح).',
         responses: [
             new OA\Response(
                 response: 200,
                 description: 'Products fetched successfully',
-                content: new OA\JsonContent(
-                    properties: [
-                        new OA\Property(property: 'success', type: 'boolean', example: true),
-                        new OA\Property(
-                            property: 'data',
-                            type: 'array',
-                            items: new OA\Items(type: 'object')
-                        ),
-                    ]
-                )
+                content: new OA\JsonContent(ref: '#/components/schemas/ProductListResponse')
             ),
         ]
     )]
@@ -1214,7 +1205,7 @@ class AuthController extends Controller
         operationId: 'searchProductsByName',
         tags: ['Products'],
         summary: 'Search products by name',
-        description: 'Searches products using product title or description (partial match).',
+        description: 'Searches products using product title or description (partial match). Each item includes is_available (متاح).',
         parameters: [
             new OA\Parameter(
                 name: 'name',
@@ -1235,22 +1226,12 @@ class AuthController extends Controller
             new OA\Response(
                 response: 200,
                 description: 'Products search completed successfully',
-                content: new OA\JsonContent(
-                    properties: [
-                        new OA\Property(property: 'success', type: 'boolean', example: true),
-                        new OA\Property(property: 'query', type: 'string', example: 'سدر'),
-                        new OA\Property(property: 'count', type: 'integer', example: 2),
-                        new OA\Property(
-                            property: 'data',
-                            type: 'array',
-                            items: new OA\Items(type: 'object')
-                        ),
-                    ]
-                )
+                content: new OA\JsonContent(ref: '#/components/schemas/ProductSearchResponse')
             ),
             new OA\Response(
                 response: 422,
-                description: 'Validation error'
+                description: 'Validation error',
+                content: new OA\JsonContent(ref: '#/components/schemas/ApiErrorResponse')
             ),
         ]
     )]
@@ -1298,20 +1279,13 @@ class AuthController extends Controller
             new OA\Response(
                 response: 200,
                 description: 'Products fetched successfully',
-                content: new OA\JsonContent(
-                    properties: [
-                        new OA\Property(property: 'success', type: 'boolean', example: true),
-                        new OA\Property(property: 'disease', type: 'string', example: 'السكري'),
-                        new OA\Property(property: 'count', type: 'integer', example: 3),
-                        new OA\Property(
-                            property: 'data',
-                            type: 'array',
-                            items: new OA\Items(type: 'object')
-                        ),
-                    ]
-                )
+                content: new OA\JsonContent(ref: '#/components/schemas/ProductSearchByDiseaseResponse')
             ),
-            new OA\Response(response: 422, description: 'حقل disease مطلوب'),
+            new OA\Response(
+                response: 422,
+                description: 'حقل disease مطلوب',
+                content: new OA\JsonContent(ref: '#/components/schemas/ApiErrorResponse')
+            ),
         ]
     )]
     public function apiSearchProductsByDisease(Request $request): JsonResponse
@@ -3098,6 +3072,7 @@ class AuthController extends Controller
             'title' => $product->title,
             'price' => $product->price,
             'discount_price' => $product->discount_price,
+            'is_available' => (bool) $product->is_available,
             'description' => $product->description,
             'benefits' => $product->benefits ?? [],
             'diseases' => $product->diseases ?? [],
