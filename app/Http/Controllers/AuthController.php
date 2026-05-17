@@ -2244,8 +2244,9 @@ class AuthController extends Controller
 
         return response()->json(array_merge(
             [
-                'registered'    => ! $newlyCreated,
-                'newly_created' => $newlyCreated,
+                'registered'        => ! $newlyCreated,
+                'newly_created'     => $newlyCreated,
+                'global_auto_reply' => (bool) ($autoReply['global'] ?? false),
             ],
             $this->transformCustomerForApi($customer, $autoReply, includeName: false),
             [

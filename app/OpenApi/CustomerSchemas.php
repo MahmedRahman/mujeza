@@ -70,10 +70,11 @@ use OpenApi\Attributes as OA;
     properties: [
         new OA\Property(property: 'registered', type: 'boolean', example: true),
         new OA\Property(property: 'newly_created', type: 'boolean', example: false),
+        new OA\Property(property: 'global_auto_reply', type: 'boolean', example: true, description: 'الإعداد العام للرد التلقائي على مستوى النظام'),
         new OA\Property(property: 'remote_jid', type: 'string', example: '96550000000@s.whatsapp.net'),
         new OA\Property(property: 'phone', type: 'string', nullable: true, example: null),
         new OA\Property(property: 'address', type: 'string', nullable: true),
-        new OA\Property(property: 'auto_reply', type: 'boolean', example: true),
+        new OA\Property(property: 'auto_reply', type: 'boolean', example: true, description: 'الرد التلقائي الفعلي لهذه المحادثة (بعد تطبيق override إن وُجد)'),
         new OA\Property(property: 'created_at', type: 'string', format: 'date-time', nullable: true),
         new OA\Property(property: 'updated_at', type: 'string', format: 'date-time', nullable: true),
         new OA\Property(

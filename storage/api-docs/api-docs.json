@@ -1522,6 +1522,11 @@
                         "type": "boolean",
                         "example": false
                     },
+                    "global_auto_reply": {
+                        "description": "الإعداد العام للرد التلقائي على مستوى النظام",
+                        "type": "boolean",
+                        "example": true
+                    },
                     "remote_jid": {
                         "type": "string",
                         "example": "96550000000@s.whatsapp.net"
@@ -1536,6 +1541,7 @@
                         "nullable": true
                     },
                     "auto_reply": {
+                        "description": "الرد التلقائي الفعلي لهذه المحادثة (بعد تطبيق override إن وُجد)",
                         "type": "boolean",
                         "example": true
                     },
