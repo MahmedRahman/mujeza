@@ -2371,7 +2371,7 @@ class AuthController extends Controller
         operationId: 'checkAndSaveCustomer',
         tags: ['Customers'],
         summary: 'تحقق وسجّل تلقائياً بالـ remoteJid',
-        description: 'يبحث عن العميل بـ remote_jid في body. إذا وُجد يُرجع registered: true. إذا لم يُوجد يُسجّله تلقائياً ويُرجع registered: false و newly_created: true.',
+        description: 'يبحث عن العميل بـ remote_jid في body. إذا وُجد يُرجع registered: true (ويُحدَّث الاسم إن أُرسل name). إذا لم يُوجد يُسجّله تلقائياً ويُرجع registered: false و newly_created: true.',
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(ref: '#/components/schemas/CustomerCheckAndSaveRequest')
@@ -2379,7 +2379,7 @@ class AuthController extends Controller
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'نتيجة التحقق والحفظ — بدون حقل name',
+                description: 'نتيجة التحقق والحفظ مع بيانات العميل بما فيها name',
                 content: new OA\JsonContent(ref: '#/components/schemas/CustomerCheckAndSaveResponse')
             ),
             new OA\Response(
@@ -2391,11 +2391,15 @@ class AuthController extends Controller
     )]
     public function apiCheckAndSaveCustomer(Request $request): JsonResponse
     {
-        $request->validate([
+        $validated = $request->validate([
             'remote_jid' => ['required', 'string', 'max:255'],
+            'name'       => ['nullable', 'string', 'max:255'],
         ]);
 
-        $remoteJid = trim((string) $request->input('remote_jid'));
+        $remoteJid = trim((string) $validated['remote_jid']);
+        $name      = array_key_exists('name', $validated) && $validated['name'] !== null
+            ? trim((string) $validated['name'])
+            : null;
 
         $customer = Customer::query()->where('remote_jid', $remoteJid)->first();
 
@@ -2406,10 +2410,13 @@ class AuthController extends Controller
             $customer = Customer::query()->create([
                 'remote_jid' => $remoteJid,
                 'phone'      => null,
-                'name'       => '',
+                'name'       => $name ?? '',
                 'address'    => null,
             ]);
             $newlyCreated = true;
+        } elseif ($name !== null && $name !== '') {
+            $customer->update(['name' => $name]);
+            $customer->refresh();
         }
 
         $orders = Order::query()
@@ -2428,7 +2435,7 @@ class AuthController extends Controller
                 'newly_created'     => $newlyCreated,
                 'global_auto_reply' => (bool) ($autoReply['global'] ?? false),
             ],
-            $this->transformCustomerForApi($customer, $autoReply, includeName: false),
+            $this->transformCustomerForApi($customer, $autoReply),
             [
                 'orders' => $orders->map(fn ($o) => [
                     'order_number' => $o->order_number,

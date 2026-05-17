@@ -819,7 +819,7 @@
                     "Customers"
                 ],
                 "summary": "تحقق وسجّل تلقائياً بالـ remoteJid",
-                "description": "يبحث عن العميل بـ remote_jid في body. إذا وُجد يُرجع registered: true. إذا لم يُوجد يُسجّله تلقائياً ويُرجع registered: false و newly_created: true.",
+                "description": "يبحث عن العميل بـ remote_jid في body. إذا وُجد يُرجع registered: true (ويُحدَّث الاسم إن أُرسل name). إذا لم يُوجد يُسجّله تلقائياً ويُرجع registered: false و newly_created: true.",
                 "operationId": "checkAndSaveCustomer",
                 "requestBody": {
                     "required": true,
@@ -833,7 +833,7 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "نتيجة التحقق والحفظ — بدون حقل name",
+                        "description": "نتيجة التحقق والحفظ مع بيانات العميل بما فيها name",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -1413,7 +1413,7 @@
                 "type": "object"
             },
             "CustomerWithoutName": {
-                "description": "بيانات عميل بدون حقل name (مستخدم في check-and-save)",
+                "description": "بيانات عميل بدون حقل name (legacy)",
                 "properties": {
                     "remote_jid": {
                         "type": "string",
@@ -1544,6 +1544,12 @@
                     "remote_jid": {
                         "type": "string",
                         "example": "96550000000@s.whatsapp.net"
+                    },
+                    "name": {
+                        "description": "اسم العميل — يُحفظ عند الإنشاء أو يُحدَّث إن وُجد العميل مسبقاً",
+                        "type": "string",
+                        "example": "محمد أحمد",
+                        "nullable": true
                     }
                 },
                 "type": "object"
@@ -1562,7 +1568,7 @@
                 "type": "object"
             },
             "CustomerCheckAndSaveResponse": {
-                "description": "registered: true إذا كان مسجلاً مسبقاً، false إذا تم إنشاؤه الآن. لا يُرجع حقل name.",
+                "description": "registered: true إذا كان مسجلاً مسبقاً، false إذا تم إنشاؤه الآن.",
                 "properties": {
                     "registered": {
                         "type": "boolean",
@@ -1584,6 +1590,11 @@
                     "phone": {
                         "type": "string",
                         "example": null,
+                        "nullable": true
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "محمد أحمد",
                         "nullable": true
                     },
                     "address": {

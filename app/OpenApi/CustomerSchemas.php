@@ -18,7 +18,7 @@ use OpenApi\Attributes as OA;
 )]
 #[OA\Schema(
     schema: 'CustomerWithoutName',
-    description: 'بيانات عميل بدون حقل name (مستخدم في check-and-save)',
+    description: 'بيانات عميل بدون حقل name (legacy)',
     properties: [
         new OA\Property(property: 'remote_jid', type: 'string', example: '96550000000@s.whatsapp.net'),
         new OA\Property(property: 'phone', type: 'string', nullable: true, example: null),
@@ -74,6 +74,7 @@ use OpenApi\Attributes as OA;
     required: ['remote_jid'],
     properties: [
         new OA\Property(property: 'remote_jid', type: 'string', example: '96550000000@s.whatsapp.net'),
+        new OA\Property(property: 'name', type: 'string', nullable: true, example: 'محمد أحمد', description: 'اسم العميل — يُحفظ عند الإنشاء أو يُحدَّث إن وُجد العميل مسبقاً'),
     ]
 )]
 #[OA\Schema(
@@ -85,13 +86,14 @@ use OpenApi\Attributes as OA;
 )]
 #[OA\Schema(
     schema: 'CustomerCheckAndSaveResponse',
-    description: 'registered: true إذا كان مسجلاً مسبقاً، false إذا تم إنشاؤه الآن. لا يُرجع حقل name.',
+    description: 'registered: true إذا كان مسجلاً مسبقاً، false إذا تم إنشاؤه الآن.',
     properties: [
         new OA\Property(property: 'registered', type: 'boolean', example: true),
         new OA\Property(property: 'newly_created', type: 'boolean', example: false),
         new OA\Property(property: 'global_auto_reply', type: 'boolean', example: true, description: 'الإعداد العام للرد التلقائي على مستوى النظام'),
         new OA\Property(property: 'remote_jid', type: 'string', example: '96550000000@s.whatsapp.net'),
         new OA\Property(property: 'phone', type: 'string', nullable: true, example: null),
+        new OA\Property(property: 'name', type: 'string', nullable: true, example: 'محمد أحمد'),
         new OA\Property(property: 'address', type: 'string', nullable: true),
         new OA\Property(property: 'auto_reply', type: 'boolean', example: true, description: 'الرد التلقائي الفعلي لهذه المحادثة (بعد تطبيق override إن وُجد)'),
         new OA\Property(property: 'created_at', type: 'string', format: 'date-time', nullable: true),
