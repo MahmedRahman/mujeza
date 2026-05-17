@@ -5,8 +5,8 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/customers', [AuthController::class, 'apiCustomers'])->name('api.customers.index');
 Route::post('/customers', [AuthController::class, 'apiStoreCustomer'])->name('api.customers.store');
-Route::get('/customers/check', [AuthController::class, 'apiCheckCustomer'])->name('api.customers.check');
-Route::get('/customers/check-and-save', [AuthController::class, 'apiCheckAndSaveCustomer'])->name('api.customers.check-and-save');
+Route::post('/customers/check', [AuthController::class, 'apiCheckCustomer'])->name('api.customers.check');
+Route::post('/customers/check-and-save', [AuthController::class, 'apiCheckAndSaveCustomer'])->name('api.customers.check-and-save');
 Route::patch('/customers/auto-reply/global', [AuthController::class, 'apiUpdateGlobalAutoReply'])->name('api.customers.auto-reply.global');
 Route::patch('/customers/auto-reply', [AuthController::class, 'apiUpdateCustomerAutoReply'])->name('api.customers.auto-reply');
 Route::get('/customers/{remote_jid}', [AuthController::class, 'apiShowCustomer'])->name('api.customers.show')->where('remote_jid', '.+');

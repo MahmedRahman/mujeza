@@ -2103,28 +2103,16 @@ class AuthController extends Controller
 
     // ─── API: Customers ──────────────────────────────────────────────────────
 
-    #[OA\Get(
+    #[OA\Post(
         path: '/api/customers/check',
         operationId: 'checkCustomer',
         tags: ['Customers'],
         summary: 'التحقق من تسجيل عميل بالهاتف أو remoteJid',
-        description: 'يتحقق إذا كان العميل مسجلاً بـ phone أو remote_jid. يجب إرسال أحدهما على الأقل. إذا كان مسجلاً تُرجع بياناته مسطّحة، وإلا يُرجع registered: false.',
-        parameters: [
-            new OA\Parameter(
-                name: 'phone',
-                description: 'رقم الهاتف (أو أرسل remote_jid)',
-                in: 'query',
-                required: false,
-                schema: new OA\Schema(type: 'string', example: '01012345678')
-            ),
-            new OA\Parameter(
-                name: 'remote_jid',
-                description: 'remoteJid (أو أرسل phone)',
-                in: 'query',
-                required: false,
-                schema: new OA\Schema(type: 'string', example: '96501012345@s.whatsapp.net')
-            ),
-        ],
+        description: 'يتحقق إذا كان العميل مسجلاً. أرسل phone أو remote_jid في body (أحدهما على الأقل).',
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(ref: '#/components/schemas/CustomerCheckRequest')
+        ),
         responses: [
             new OA\Response(
                 response: 200,
@@ -2150,8 +2138,8 @@ class AuthController extends Controller
             'remote_jid' => ['nullable', 'string'],
         ]);
 
-        $phone     = trim((string) ($request->query('phone') ?? ''));
-        $remoteJid = trim((string) ($request->query('remote_jid') ?? ''));
+        $phone     = trim((string) ($request->input('phone') ?? ''));
+        $remoteJid = trim((string) ($request->input('remote_jid') ?? ''));
 
         if ($phone === '' && $remoteJid === '') {
             return response()->json([
@@ -2185,21 +2173,16 @@ class AuthController extends Controller
         ]);
     }
 
-    #[OA\Get(
+    #[OA\Post(
         path: '/api/customers/check-and-save',
         operationId: 'checkAndSaveCustomer',
         tags: ['Customers'],
         summary: 'تحقق وسجّل تلقائياً بالـ remoteJid',
-        description: 'يبحث عن العميل بالـ remote_jid. إذا وُجد يُرجع registered: true وبياناته. إذا لم يُوجد يُسجّله تلقائياً (remote_jid فقط، phone فارغ) ويُرجع registered: false و newly_created: true. مناسب لتسجيل العملاء تلقائياً عند أول رسالة واتساب.',
-        parameters: [
-            new OA\Parameter(
-                name: 'remote_jid',
-                description: 'معرّف واتساب للعميل (remoteJid)',
-                in: 'query',
-                required: true,
-                schema: new OA\Schema(type: 'string', example: '96550000000@s.whatsapp.net')
-            ),
-        ],
+        description: 'يبحث عن العميل بـ remote_jid في body. إذا وُجد يُرجع registered: true. إذا لم يُوجد يُسجّله تلقائياً ويُرجع registered: false و newly_created: true.',
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(ref: '#/components/schemas/CustomerCheckAndSaveRequest')
+        ),
         responses: [
             new OA\Response(
                 response: 200,
@@ -2219,7 +2202,7 @@ class AuthController extends Controller
             'remote_jid' => ['required', 'string', 'max:255'],
         ]);
 
-        $remoteJid = trim((string) $request->query('remote_jid'));
+        $remoteJid = trim((string) $request->input('remote_jid'));
 
         $customer = Customer::query()->where('remote_jid', $remoteJid)->first();
 
@@ -2317,16 +2300,7 @@ class AuthController extends Controller
         operationId: 'updateCustomerAutoReply',
         tags: ['Customers'],
         summary: 'تغيير الرد التلقائي لعميل بـ remoteJid',
-        description: 'يُحدّد override للرد التلقائي لهذه المحادثة. أرسل remote_jid كـ query parameter أو في body. إذا كانت enabled مطابقة للإعداد العام يُزال الـ override.',
-        parameters: [
-            new OA\Parameter(
-                name: 'remote_jid',
-                description: 'معرّف واتساب للعميل (يمكن إرساله في body بدلاً من query)',
-                in: 'query',
-                required: false,
-                schema: new OA\Schema(type: 'string', example: '96550000000@s.whatsapp.net')
-            ),
-        ],
+        description: 'يُحدّد override للرد التلقائي لهذه المحادثة. أرسل remote_jid و enabled في body. إذا كانت enabled مطابقة للإعداد العام يُزال الـ override.',
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(ref: '#/components/schemas/CustomerAutoReplyRequest')

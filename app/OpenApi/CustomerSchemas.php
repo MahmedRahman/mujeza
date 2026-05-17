@@ -58,6 +58,20 @@ use OpenApi\Attributes as OA;
     ]
 )]
 #[OA\Schema(
+    schema: 'CustomerCheckRequest',
+    properties: [
+        new OA\Property(property: 'phone', type: 'string', nullable: true, example: '96550000000', description: 'أرسل phone أو remote_jid (أحدهما على الأقل)'),
+        new OA\Property(property: 'remote_jid', type: 'string', nullable: true, example: '96550000000@s.whatsapp.net'),
+    ]
+)]
+#[OA\Schema(
+    schema: 'CustomerCheckAndSaveRequest',
+    required: ['remote_jid'],
+    properties: [
+        new OA\Property(property: 'remote_jid', type: 'string', example: '96550000000@s.whatsapp.net'),
+    ]
+)]
+#[OA\Schema(
     schema: 'CustomerCheckUnregisteredResponse',
     properties: [
         new OA\Property(property: 'registered', type: 'boolean', example: false),

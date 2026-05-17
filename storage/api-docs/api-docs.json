@@ -824,35 +824,23 @@
             }
         },
         "/api/customers/check": {
-            "get": {
+            "post": {
                 "tags": [
                     "Customers"
                 ],
                 "summary": "التحقق من تسجيل عميل بالهاتف أو remoteJid",
-                "description": "يتحقق إذا كان العميل مسجلاً بـ phone أو remote_jid. يجب إرسال أحدهما على الأقل. إذا كان مسجلاً تُرجع بياناته مسطّحة، وإلا يُرجع registered: false.",
+                "description": "يتحقق إذا كان العميل مسجلاً. أرسل phone أو remote_jid في body (أحدهما على الأقل).",
                 "operationId": "checkCustomer",
-                "parameters": [
-                    {
-                        "name": "phone",
-                        "in": "query",
-                        "description": "رقم الهاتف (أو أرسل remote_jid)",
-                        "required": false,
-                        "schema": {
-                            "type": "string",
-                            "example": "01012345678"
-                        }
-                    },
-                    {
-                        "name": "remote_jid",
-                        "in": "query",
-                        "description": "remoteJid (أو أرسل phone)",
-                        "required": false,
-                        "schema": {
-                            "type": "string",
-                            "example": "96501012345@s.whatsapp.net"
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CustomerCheckRequest"
+                            }
                         }
                     }
-                ],
+                },
                 "responses": {
                     "200": {
                         "description": "نتيجة التحقق — registered: true مع بيانات العميل، أو registered: false مع رسالة",
@@ -885,25 +873,23 @@
             }
         },
         "/api/customers/check-and-save": {
-            "get": {
+            "post": {
                 "tags": [
                     "Customers"
                 ],
                 "summary": "تحقق وسجّل تلقائياً بالـ remoteJid",
-                "description": "يبحث عن العميل بالـ remote_jid. إذا وُجد يُرجع registered: true وبياناته. إذا لم يُوجد يُسجّله تلقائياً (remote_jid فقط، phone فارغ) ويُرجع registered: false و newly_created: true. مناسب لتسجيل العملاء تلقائياً عند أول رسالة واتساب.",
+                "description": "يبحث عن العميل بـ remote_jid في body. إذا وُجد يُرجع registered: true. إذا لم يُوجد يُسجّله تلقائياً ويُرجع registered: false و newly_created: true.",
                 "operationId": "checkAndSaveCustomer",
-                "parameters": [
-                    {
-                        "name": "remote_jid",
-                        "in": "query",
-                        "description": "معرّف واتساب للعميل (remoteJid)",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "example": "96550000000@s.whatsapp.net"
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CustomerCheckAndSaveRequest"
+                            }
                         }
                     }
-                ],
+                },
                 "responses": {
                     "200": {
                         "description": "نتيجة التحقق والحفظ — بدون حقل name",
@@ -976,20 +962,8 @@
                     "Customers"
                 ],
                 "summary": "تغيير الرد التلقائي لعميل بـ remoteJid",
-                "description": "يُحدّد override للرد التلقائي لهذه المحادثة. أرسل remote_jid كـ query parameter أو في body. إذا كانت enabled مطابقة للإعداد العام يُزال الـ override.",
+                "description": "يُحدّد override للرد التلقائي لهذه المحادثة. أرسل remote_jid و enabled في body. إذا كانت enabled مطابقة للإعداد العام يُزال الـ override.",
                 "operationId": "updateCustomerAutoReply",
-                "parameters": [
-                    {
-                        "name": "remote_jid",
-                        "in": "query",
-                        "description": "معرّف واتساب للعميل (يمكن إرساله في body بدلاً من query)",
-                        "required": false,
-                        "schema": {
-                            "type": "string",
-                            "example": "96550000000@s.whatsapp.net"
-                        }
-                    }
-                ],
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -1600,6 +1574,34 @@
                         "type": "string",
                         "format": "date-time",
                         "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "CustomerCheckRequest": {
+                "properties": {
+                    "phone": {
+                        "description": "أرسل phone أو remote_jid (أحدهما على الأقل)",
+                        "type": "string",
+                        "example": "96550000000",
+                        "nullable": true
+                    },
+                    "remote_jid": {
+                        "type": "string",
+                        "example": "96550000000@s.whatsapp.net",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "CustomerCheckAndSaveRequest": {
+                "required": [
+                    "remote_jid"
+                ],
+                "properties": {
+                    "remote_jid": {
+                        "type": "string",
+                        "example": "96550000000@s.whatsapp.net"
                     }
                 },
                 "type": "object"
