@@ -2124,33 +2124,19 @@ class AuthController extends Controller
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'نتيجة التحقق',
+                description: 'نتيجة التحقق — registered: true مع بيانات العميل، أو registered: false مع رسالة',
                 content: new OA\JsonContent(
                     oneOf: [
-                        new OA\Schema(
-                            title: 'مسجل',
-                            properties: [
-                                new OA\Property(property: 'registered', type: 'boolean', example: true),
-                                new OA\Property(property: 'phone', type: 'string', example: '01012345678'),
-                                new OA\Property(property: 'remote_jid', type: 'string', nullable: true, example: '96501012345@s.whatsapp.net'),
-                                new OA\Property(property: 'name', type: 'string', example: 'محمد أحمد'),
-                                new OA\Property(property: 'address', type: 'string', example: 'القاهرة - مدينة نصر', nullable: true),
-                                new OA\Property(property: 'auto_reply', type: 'boolean', example: true),
-                                new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
-                                new OA\Property(property: 'updated_at', type: 'string', format: 'date-time'),
-                            ]
-                        ),
-                        new OA\Schema(
-                            title: 'غير مسجل',
-                            properties: [
-                                new OA\Property(property: 'registered', type: 'boolean', example: false),
-                                new OA\Property(property: 'message', type: 'string', example: 'هذا الرقم غير مسجل.'),
-                            ]
-                        ),
+                        new OA\Schema(ref: '#/components/schemas/CustomerCheckRegisteredResponse'),
+                        new OA\Schema(ref: '#/components/schemas/CustomerCheckUnregisteredResponse'),
                     ]
                 )
             ),
-            new OA\Response(response: 422, description: 'يجب إرسال phone أو remote_jid'),
+            new OA\Response(
+                response: 422,
+                description: 'يجب إرسال phone أو remote_jid',
+                content: new OA\JsonContent(ref: '#/components/schemas/ApiErrorResponse')
+            ),
         ]
     )]
     public function apiCheckCustomer(Request $request): JsonResponse
@@ -2200,7 +2186,7 @@ class AuthController extends Controller
         operationId: 'checkAndSaveCustomer',
         tags: ['Customers'],
         summary: 'تحقق وسجّل تلقائياً بالـ remoteJid',
-        description: 'يبحث عن العميل بالـ remote_jid. إذا وُجد يُرجع بياناته (found: true). إذا لم يُوجد يُسجّله تلقائياً باستخدام remote_jid فقط كمعرّف أساسي (phone يُترك فارغاً لأنه غير معروف في أول رسالة)، ثم يُرجع بياناته (found: false, newly_created: true). مناسب لتسجيل العملاء تلقائياً عند أول رسالة واتساب.',
+        description: 'يبحث عن العميل بالـ remote_jid. إذا وُجد يُرجع registered: true وبياناته. إذا لم يُوجد يُسجّله تلقائياً (remote_jid فقط، phone فارغ) ويُرجع registered: false و newly_created: true. مناسب لتسجيل العملاء تلقائياً عند أول رسالة واتساب.',
         parameters: [
             new OA\Parameter(
                 name: 'remote_jid',
@@ -2209,44 +2195,27 @@ class AuthController extends Controller
                 required: true,
                 schema: new OA\Schema(type: 'string', example: '96550000000@s.whatsapp.net')
             ),
-            new OA\Parameter(
-                name: 'name',
-                description: 'اسم العميل (اختياري — يُستخدم فقط عند الإنشاء)',
-                in: 'query',
-                required: false,
-                schema: new OA\Schema(type: 'string', example: 'محمد أحمد')
-            ),
         ],
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'نتيجة التحقق والحفظ',
-                content: new OA\JsonContent(
-                    properties: [
-                        new OA\Property(property: 'found', type: 'boolean', example: false, description: 'true لو كان موجوداً مسبقاً، false لو تم إنشاؤه الآن'),
-                        new OA\Property(property: 'newly_created', type: 'boolean', example: true),
-                        new OA\Property(property: 'phone', type: 'string', example: '96550000000@s.whatsapp.net'),
-                        new OA\Property(property: 'remote_jid', type: 'string', example: '96550000000@s.whatsapp.net'),
-                        new OA\Property(property: 'name', type: 'string', example: ''),
-                        new OA\Property(property: 'address', type: 'string', nullable: true),
-                        new OA\Property(property: 'auto_reply', type: 'boolean', example: true),
-                        new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
-                        new OA\Property(property: 'updated_at', type: 'string', format: 'date-time'),
-                    ]
-                )
+                description: 'نتيجة التحقق والحفظ — بدون حقل name',
+                content: new OA\JsonContent(ref: '#/components/schemas/CustomerCheckAndSaveResponse')
             ),
-            new OA\Response(response: 422, description: 'حقل remote_jid مطلوب'),
+            new OA\Response(
+                response: 422,
+                description: 'حقل remote_jid مطلوب',
+                content: new OA\JsonContent(ref: '#/components/schemas/ApiErrorResponse')
+            ),
         ]
     )]
     public function apiCheckAndSaveCustomer(Request $request): JsonResponse
     {
         $request->validate([
             'remote_jid' => ['required', 'string', 'max:255'],
-            'name'       => ['nullable', 'string', 'max:255'],
         ]);
 
         $remoteJid = trim((string) $request->query('remote_jid'));
-        $name      = trim((string) ($request->query('name') ?? ''));
 
         $customer = Customer::query()->where('remote_jid', $remoteJid)->first();
 
@@ -2257,7 +2226,7 @@ class AuthController extends Controller
             $customer = Customer::query()->create([
                 'remote_jid' => $remoteJid,
                 'phone'      => null,
-                'name'       => $name,
+                'name'       => '',
                 'address'    => null,
             ]);
             $newlyCreated = true;
@@ -2275,10 +2244,10 @@ class AuthController extends Controller
 
         return response()->json(array_merge(
             [
-                'found'         => ! $newlyCreated,
+                'registered'    => ! $newlyCreated,
                 'newly_created' => $newlyCreated,
             ],
-            $this->transformCustomerForApi($customer, $autoReply),
+            $this->transformCustomerForApi($customer, $autoReply, includeName: false),
             [
                 'orders' => $orders->map(fn ($o) => [
                     'order_number' => $o->order_number,
@@ -2314,27 +2283,7 @@ class AuthController extends Controller
             new OA\Response(
                 response: 200,
                 description: 'Customers fetched successfully',
-                content: new OA\JsonContent(
-                    properties: [
-                        new OA\Property(property: 'success', type: 'boolean', example: true),
-                        new OA\Property(property: 'count', type: 'integer', example: 5),
-                        new OA\Property(
-                            property: 'data',
-                            type: 'array',
-                            items: new OA\Items(
-                                properties: [
-                                    new OA\Property(property: 'phone', type: 'string', example: '01012345678'),
-                                    new OA\Property(property: 'remote_jid', type: 'string', nullable: true, example: '96501012345@s.whatsapp.net'),
-                                    new OA\Property(property: 'name', type: 'string', example: 'محمد أحمد'),
-                                    new OA\Property(property: 'address', type: 'string', example: 'القاهرة - مدينة نصر'),
-                                    new OA\Property(property: 'auto_reply', type: 'boolean', example: true),
-                                    new OA\Property(property: 'created_at', type: 'string', format: 'date-time', example: '2026-05-10T18:00:00Z'),
-                                    new OA\Property(property: 'updated_at', type: 'string', format: 'date-time', example: '2026-05-10T18:00:00Z'),
-                                ]
-                            )
-                        ),
-                    ]
-                )
+                content: new OA\JsonContent(ref: '#/components/schemas/CustomerListResponse')
             ),
         ]
     )]
@@ -2382,26 +2331,13 @@ class AuthController extends Controller
             new OA\Response(
                 response: 200,
                 description: 'Customer fetched successfully',
-                content: new OA\JsonContent(
-                    properties: [
-                        new OA\Property(property: 'success', type: 'boolean', example: true),
-                        new OA\Property(
-                            property: 'data',
-                            type: 'object',
-                            properties: [
-                                new OA\Property(property: 'remote_jid', type: 'string', example: '96550000000@s.whatsapp.net'),
-                                new OA\Property(property: 'phone', type: 'string', nullable: true, example: '96550000000'),
-                                new OA\Property(property: 'name', type: 'string', example: 'محمد أحمد'),
-                                new OA\Property(property: 'address', type: 'string', nullable: true, example: 'القاهرة - مدينة نصر'),
-                                new OA\Property(property: 'auto_reply', type: 'boolean', example: true),
-                                new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
-                                new OA\Property(property: 'updated_at', type: 'string', format: 'date-time'),
-                            ]
-                        ),
-                    ]
-                )
+                content: new OA\JsonContent(ref: '#/components/schemas/CustomerShowResponse')
             ),
-            new OA\Response(response: 404, description: 'Customer not found'),
+            new OA\Response(
+                response: 404,
+                description: 'Customer not found',
+                content: new OA\JsonContent(ref: '#/components/schemas/ApiErrorResponse')
+            ),
         ]
     )]
     public function apiShowCustomer(string $remote_jid): JsonResponse
@@ -2440,15 +2376,13 @@ class AuthController extends Controller
             new OA\Response(
                 response: 201,
                 description: 'Customer created successfully',
-                content: new OA\JsonContent(
-                    properties: [
-                        new OA\Property(property: 'success', type: 'boolean', example: true),
-                        new OA\Property(property: 'message', type: 'string', example: 'تم إضافة المستخدم بنجاح.'),
-                        new OA\Property(property: 'data', type: 'object'),
-                    ]
-                )
+                content: new OA\JsonContent(ref: '#/components/schemas/CustomerMutationResponse')
             ),
-            new OA\Response(response: 422, description: 'Validation error — remote_jid already exists or missing required fields'),
+            new OA\Response(
+                response: 422,
+                description: 'Validation error — remote_jid already exists or missing required fields',
+                content: new OA\JsonContent(ref: '#/components/schemas/ApiErrorResponse')
+            ),
         ]
     )]
     public function apiStoreCustomer(Request $request): JsonResponse
@@ -2496,9 +2430,21 @@ class AuthController extends Controller
             )
         ),
         responses: [
-            new OA\Response(response: 200, description: 'Customer updated successfully'),
-            new OA\Response(response: 404, description: 'Customer not found'),
-            new OA\Response(response: 422, description: 'Validation error'),
+            new OA\Response(
+                response: 200,
+                description: 'Customer updated successfully',
+                content: new OA\JsonContent(ref: '#/components/schemas/CustomerMutationResponse')
+            ),
+            new OA\Response(
+                response: 404,
+                description: 'Customer not found',
+                content: new OA\JsonContent(ref: '#/components/schemas/ApiErrorResponse')
+            ),
+            new OA\Response(
+                response: 422,
+                description: 'Validation error',
+                content: new OA\JsonContent(ref: '#/components/schemas/ApiErrorResponse')
+            ),
         ]
     )]
     public function apiUpdateCustomer(Request $request, string $remote_jid): JsonResponse
@@ -2539,8 +2485,21 @@ class AuthController extends Controller
             ),
         ],
         responses: [
-            new OA\Response(response: 200, description: 'Customer deleted successfully'),
-            new OA\Response(response: 404, description: 'Customer not found'),
+            new OA\Response(
+                response: 200,
+                description: 'Customer deleted successfully',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'success', type: 'boolean', example: true),
+                        new OA\Property(property: 'message', type: 'string', example: 'تم حذف المستخدم بنجاح.'),
+                    ]
+                )
+            ),
+            new OA\Response(
+                response: 404,
+                description: 'Customer not found',
+                content: new OA\JsonContent(ref: '#/components/schemas/ApiErrorResponse')
+            ),
         ]
     )]
     public function apiDestroyCustomer(string $remote_jid): JsonResponse
@@ -2857,7 +2816,7 @@ class AuthController extends Controller
         return ['global' => $global, 'overrides' => $overrides];
     }
 
-    private function transformCustomerForApi(Customer $customer, array $autoReply = []): array
+    private function transformCustomerForApi(Customer $customer, array $autoReply = [], bool $includeName = true): array
     {
         $global    = $autoReply['global'] ?? false;
         $overrides = $autoReply['overrides'] ?? [];
@@ -2867,15 +2826,20 @@ class AuthController extends Controller
             ? (bool) $overrides[$chatId]
             : $global;
 
-        return [
+        $data = [
             'remote_jid'  => $customer->remote_jid,
             'phone'       => $customer->phone,
-            'name'        => $customer->name,
             'address'     => $customer->address,
             'auto_reply'  => $autoReplyEnabled,
             'created_at'  => optional($customer->created_at)?->toISOString(),
             'updated_at'  => optional($customer->updated_at)?->toISOString(),
         ];
+
+        if ($includeName) {
+            $data['name'] = $customer->name;
+        }
+
+        return $data;
     }
 
     private function transformComplaintForApi(Complaint $complaint): array

@@ -855,64 +855,16 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "نتيجة التحقق",
+                        "description": "نتيجة التحقق — registered: true مع بيانات العميل، أو registered: false مع رسالة",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "oneOf": [
                                         {
-                                            "title": "مسجل",
-                                            "properties": {
-                                                "registered": {
-                                                    "type": "boolean",
-                                                    "example": true
-                                                },
-                                                "phone": {
-                                                    "type": "string",
-                                                    "example": "01012345678"
-                                                },
-                                                "remote_jid": {
-                                                    "type": "string",
-                                                    "example": "96501012345@s.whatsapp.net",
-                                                    "nullable": true
-                                                },
-                                                "name": {
-                                                    "type": "string",
-                                                    "example": "محمد أحمد"
-                                                },
-                                                "address": {
-                                                    "type": "string",
-                                                    "example": "القاهرة - مدينة نصر",
-                                                    "nullable": true
-                                                },
-                                                "auto_reply": {
-                                                    "type": "boolean",
-                                                    "example": true
-                                                },
-                                                "created_at": {
-                                                    "type": "string",
-                                                    "format": "date-time"
-                                                },
-                                                "updated_at": {
-                                                    "type": "string",
-                                                    "format": "date-time"
-                                                }
-                                            },
-                                            "type": "object"
+                                            "$ref": "#/components/schemas/CustomerCheckRegisteredResponse"
                                         },
                                         {
-                                            "title": "غير مسجل",
-                                            "properties": {
-                                                "registered": {
-                                                    "type": "boolean",
-                                                    "example": false
-                                                },
-                                                "message": {
-                                                    "type": "string",
-                                                    "example": "هذا الرقم غير مسجل."
-                                                }
-                                            },
-                                            "type": "object"
+                                            "$ref": "#/components/schemas/CustomerCheckUnregisteredResponse"
                                         }
                                     ]
                                 }
@@ -920,7 +872,14 @@
                         }
                     },
                     "422": {
-                        "description": "يجب إرسال phone أو remote_jid"
+                        "description": "يجب إرسال phone أو remote_jid",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrorResponse"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -931,7 +890,7 @@
                     "Customers"
                 ],
                 "summary": "تحقق وسجّل تلقائياً بالـ remoteJid",
-                "description": "يبحث عن العميل بالـ remote_jid. إذا وُجد يُرجع بياناته (found: true). إذا لم يُوجد يُسجّله تلقائياً باستخدام remote_jid فقط كمعرّف أساسي (phone يُترك فارغاً لأنه غير معروف في أول رسالة)، ثم يُرجع بياناته (found: false, newly_created: true). مناسب لتسجيل العملاء تلقائياً عند أول رسالة واتساب.",
+                "description": "يبحث عن العميل بالـ remote_jid. إذا وُجد يُرجع registered: true وبياناته. إذا لم يُوجد يُسجّله تلقائياً (remote_jid فقط، phone فارغ) ويُرجع registered: false و newly_created: true. مناسب لتسجيل العملاء تلقائياً عند أول رسالة واتساب.",
                 "operationId": "checkAndSaveCustomer",
                 "parameters": [
                     {
@@ -943,70 +902,28 @@
                             "type": "string",
                             "example": "96550000000@s.whatsapp.net"
                         }
-                    },
-                    {
-                        "name": "name",
-                        "in": "query",
-                        "description": "اسم العميل (اختياري — يُستخدم فقط عند الإنشاء)",
-                        "required": false,
-                        "schema": {
-                            "type": "string",
-                            "example": "محمد أحمد"
-                        }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "نتيجة التحقق والحفظ",
+                        "description": "نتيجة التحقق والحفظ — بدون حقل name",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "properties": {
-                                        "found": {
-                                            "description": "true لو كان موجوداً مسبقاً، false لو تم إنشاؤه الآن",
-                                            "type": "boolean",
-                                            "example": false
-                                        },
-                                        "newly_created": {
-                                            "type": "boolean",
-                                            "example": true
-                                        },
-                                        "phone": {
-                                            "type": "string",
-                                            "example": "96550000000@s.whatsapp.net"
-                                        },
-                                        "remote_jid": {
-                                            "type": "string",
-                                            "example": "96550000000@s.whatsapp.net"
-                                        },
-                                        "name": {
-                                            "type": "string",
-                                            "example": ""
-                                        },
-                                        "address": {
-                                            "type": "string",
-                                            "nullable": true
-                                        },
-                                        "auto_reply": {
-                                            "type": "boolean",
-                                            "example": true
-                                        },
-                                        "created_at": {
-                                            "type": "string",
-                                            "format": "date-time"
-                                        },
-                                        "updated_at": {
-                                            "type": "string",
-                                            "format": "date-time"
-                                        }
-                                    },
-                                    "type": "object"
+                                    "$ref": "#/components/schemas/CustomerCheckAndSaveResponse"
                                 }
                             }
                         }
                     },
                     "422": {
-                        "description": "حقل remote_jid مطلوب"
+                        "description": "حقل remote_jid مطلوب",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrorResponse"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -1037,56 +954,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
-                                        },
-                                        "count": {
-                                            "type": "integer",
-                                            "example": 5
-                                        },
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "properties": {
-                                                    "phone": {
-                                                        "type": "string",
-                                                        "example": "01012345678"
-                                                    },
-                                                    "remote_jid": {
-                                                        "type": "string",
-                                                        "example": "96501012345@s.whatsapp.net",
-                                                        "nullable": true
-                                                    },
-                                                    "name": {
-                                                        "type": "string",
-                                                        "example": "محمد أحمد"
-                                                    },
-                                                    "address": {
-                                                        "type": "string",
-                                                        "example": "القاهرة - مدينة نصر"
-                                                    },
-                                                    "auto_reply": {
-                                                        "type": "boolean",
-                                                        "example": true
-                                                    },
-                                                    "created_at": {
-                                                        "type": "string",
-                                                        "format": "date-time",
-                                                        "example": "2026-05-10T18:00:00Z"
-                                                    },
-                                                    "updated_at": {
-                                                        "type": "string",
-                                                        "format": "date-time",
-                                                        "example": "2026-05-10T18:00:00Z"
-                                                    }
-                                                },
-                                                "type": "object"
-                                            }
-                                        }
-                                    },
-                                    "type": "object"
+                                    "$ref": "#/components/schemas/CustomerListResponse"
                                 }
                             }
                         }
@@ -1140,26 +1008,20 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "تم إضافة المستخدم بنجاح."
-                                        },
-                                        "data": {
-                                            "type": "object"
-                                        }
-                                    },
-                                    "type": "object"
+                                    "$ref": "#/components/schemas/CustomerMutationResponse"
                                 }
                             }
                         }
                     },
                     "422": {
-                        "description": "Validation error — remote_jid already exists or missing required fields"
+                        "description": "Validation error — remote_jid already exists or missing required fields",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrorResponse"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -1189,54 +1051,20 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
-                                        },
-                                        "data": {
-                                            "properties": {
-                                                "remote_jid": {
-                                                    "type": "string",
-                                                    "example": "96550000000@s.whatsapp.net"
-                                                },
-                                                "phone": {
-                                                    "type": "string",
-                                                    "example": "96550000000",
-                                                    "nullable": true
-                                                },
-                                                "name": {
-                                                    "type": "string",
-                                                    "example": "محمد أحمد"
-                                                },
-                                                "address": {
-                                                    "type": "string",
-                                                    "example": "القاهرة - مدينة نصر",
-                                                    "nullable": true
-                                                },
-                                                "auto_reply": {
-                                                    "type": "boolean",
-                                                    "example": true
-                                                },
-                                                "created_at": {
-                                                    "type": "string",
-                                                    "format": "date-time"
-                                                },
-                                                "updated_at": {
-                                                    "type": "string",
-                                                    "format": "date-time"
-                                                }
-                                            },
-                                            "type": "object"
-                                        }
-                                    },
-                                    "type": "object"
+                                    "$ref": "#/components/schemas/CustomerShowResponse"
                                 }
                             }
                         }
                     },
                     "404": {
-                        "description": "Customer not found"
+                        "description": "Customer not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrorResponse"
+                                }
+                            }
+                        }
                     }
                 }
             },
@@ -1290,13 +1118,34 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Customer updated successfully"
+                        "description": "Customer updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CustomerMutationResponse"
+                                }
+                            }
+                        }
                     },
                     "404": {
-                        "description": "Customer not found"
+                        "description": "Customer not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrorResponse"
+                                }
+                            }
+                        }
                     },
                     "422": {
-                        "description": "Validation error"
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrorResponse"
+                                }
+                            }
+                        }
                     }
                 }
             },
@@ -1320,10 +1169,34 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Customer deleted successfully"
+                        "description": "Customer deleted successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "تم حذف المستخدم بنجاح."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "404": {
-                        "description": "Customer not found"
+                        "description": "Customer not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrorResponse"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -1480,6 +1353,268 @@
     },
     "components": {
         "schemas": {
+            "Customer": {
+                "properties": {
+                    "remote_jid": {
+                        "type": "string",
+                        "example": "96550000000@s.whatsapp.net"
+                    },
+                    "phone": {
+                        "type": "string",
+                        "example": "96550000000",
+                        "nullable": true
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "محمد أحمد",
+                        "nullable": true
+                    },
+                    "address": {
+                        "type": "string",
+                        "example": "الكويت - حولي",
+                        "nullable": true
+                    },
+                    "auto_reply": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "CustomerWithoutName": {
+                "description": "بيانات عميل بدون حقل name (مستخدم في check-and-save)",
+                "properties": {
+                    "remote_jid": {
+                        "type": "string",
+                        "example": "96550000000@s.whatsapp.net"
+                    },
+                    "phone": {
+                        "type": "string",
+                        "example": null,
+                        "nullable": true
+                    },
+                    "address": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "auto_reply": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "CustomerOrderSummary": {
+                "properties": {
+                    "order_number": {
+                        "type": "integer",
+                        "example": 1024
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/OrderStatus"
+                    },
+                    "items": {
+                        "type": "string",
+                        "example": "عسل سدر 2 عبوة"
+                    }
+                },
+                "type": "object"
+            },
+            "CustomerComplaintSummary": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "title": {
+                        "type": "string",
+                        "example": "تأخر التوصيل"
+                    },
+                    "status": {
+                        "type": "string",
+                        "example": "مفتوحة"
+                    }
+                },
+                "type": "object"
+            },
+            "CustomerCheckRegisteredResponse": {
+                "properties": {
+                    "registered": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "remote_jid": {
+                        "type": "string",
+                        "example": "96550000000@s.whatsapp.net"
+                    },
+                    "phone": {
+                        "type": "string",
+                        "example": "96550000000",
+                        "nullable": true
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "محمد أحمد",
+                        "nullable": true
+                    },
+                    "address": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "auto_reply": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "CustomerCheckUnregisteredResponse": {
+                "properties": {
+                    "registered": {
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "هذا الرقم غير مسجل."
+                    }
+                },
+                "type": "object"
+            },
+            "CustomerCheckAndSaveResponse": {
+                "description": "registered: true إذا كان مسجلاً مسبقاً، false إذا تم إنشاؤه الآن. لا يُرجع حقل name.",
+                "properties": {
+                    "registered": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "newly_created": {
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "remote_jid": {
+                        "type": "string",
+                        "example": "96550000000@s.whatsapp.net"
+                    },
+                    "phone": {
+                        "type": "string",
+                        "example": null,
+                        "nullable": true
+                    },
+                    "address": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "auto_reply": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "orders": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/CustomerOrderSummary"
+                        }
+                    },
+                    "complaints": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/CustomerComplaintSummary"
+                        }
+                    }
+                },
+                "type": "object"
+            },
+            "CustomerListResponse": {
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "query": {
+                        "type": "string",
+                        "example": ""
+                    },
+                    "count": {
+                        "type": "integer",
+                        "example": 5
+                    },
+                    "data": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Customer"
+                        }
+                    }
+                },
+                "type": "object"
+            },
+            "CustomerShowResponse": {
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/Customer"
+                    }
+                },
+                "type": "object"
+            },
+            "CustomerMutationResponse": {
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "تم إضافة المستخدم بنجاح."
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/Customer"
+                    }
+                },
+                "type": "object"
+            },
             "OrderStatus": {
                 "type": "string",
                 "example": "طلب جديد",
