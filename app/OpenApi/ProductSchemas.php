@@ -4,6 +4,10 @@ namespace App\OpenApi;
 
 use OpenApi\Attributes as OA;
 
+#[OA\Tag(
+    name: 'Products',
+    description: 'منتجات المتجر — القائمة الكاملة، البحث الذكي، ونص الأسماء للوكلاء'
+)]
 #[OA\Schema(
     schema: 'Product',
     properties: [
@@ -73,23 +77,37 @@ use OpenApi\Attributes as OA;
 )]
 #[OA\Schema(
     schema: 'ProductSearchResponse',
+    description: 'نتائج البحث الذكي عن المنتجات — مرتبة من الأقرب للأبعد',
     properties: [
         new OA\Property(property: 'success', type: 'boolean', example: true),
-        new OA\Property(property: 'query', type: 'string', example: 'عسل سدر'),
-        new OA\Property(property: 'count', type: 'integer', example: 2),
+        new OA\Property(
+            property: 'query',
+            type: 'string',
+            description: 'نص البحث الذي أُرسل في المعامل q',
+            example: 'عسل سدر'
+        ),
+        new OA\Property(
+            property: 'count',
+            type: 'integer',
+            description: 'عدد المنتجات المقترحة',
+            example: 2
+        ),
         new OA\Property(
             property: 'data',
             type: 'array',
+            description: 'قائمة المنتجات المطابقة مرتبة حسب التقارب',
             items: new OA\Items(ref: '#/components/schemas/Product')
         ),
     ]
 )]
 #[OA\Schema(
     schema: 'ProductNamesTextResponse',
+    description: 'كل المنتجات كنص واحد — كل منتج بالصيغة id|اسم المنتج والفاصل بين المنتجات فاصلة',
     properties: [
         new OA\Property(
             property: 'data',
             type: 'string',
+            description: 'نص مفصول بفواصل: id|اسم_المنتج,id|اسم_المنتج,...',
             example: '12|عسل سدر,15|عسل مانوكا,22|زيت زيتون'
         ),
     ]

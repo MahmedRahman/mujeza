@@ -21,8 +21,8 @@
                 "tags": [
                     "Products"
                 ],
-                "summary": "Get products list",
-                "description": "Returns all products in one response. Each item includes is_available (متاح).",
+                "summary": "قائمة المنتجات الكاملة",
+                "description": "يرجع كل المنتجات بتفاصيلها الكاملة. كل منتج يتضمن is_available (متاح).",
                 "operationId": "getProducts",
                 "responses": {
                     "200": {
@@ -43,8 +43,8 @@
                 "tags": [
                     "Products"
                 ],
-                "summary": "Get all product names with IDs as comma-separated text",
-                "description": "Returns all products as id|title pairs joined by commas in the data field (e.g. 12|عسل سدر,15|عسل مانوكا).",
+                "summary": "أسماء المنتجات مع المعرّف كنص",
+                "description": "يرجع كل المنتجات في حقل data كنص واحد. كل منتج بالصيغة: id|اسم_المنتج والفاصل بين المنتجات فاصلة (,). مثال: 14|عسل سدر,196|التلبينة النبوية",
                 "operationId": "getProductsNamesAsText",
                 "responses": {
                     "200": {
@@ -65,28 +65,31 @@
                 "tags": [
                     "Products"
                 ],
-                "summary": "Smart product search by name",
-                "description": "Fuzzy search on product titles using a single query parameter. Supports partial matches (start/middle/end of name) and tolerates minor typos. Results are ranked by relevance.",
-                "operationId": "searchProductsByName",
+                "summary": "بحث ذكي عن منتج بالاسم",
+                "description": "بحث ذكي بمعامل واحد q. يقترح أقرب المنتجات حتى لو كتبت جزء من الاسم (أوله أو آخره) أو فيه خطأ إملائي بسيط. النتائج مرتبة من الأقرب للأبعد.",
+                "operationId": "searchProducts",
                 "parameters": [
                     {
                         "name": "q",
                         "in": "query",
-                        "description": "Search text (partial name, typo-tolerant)",
+                        "description": "نص البحث — جزء من اسم المنتج (حد أدنى حرفين)",
                         "required": true,
                         "schema": {
                             "type": "string",
-                            "example": "عسل سدر"
+                            "example": "عسل سدر",
+                            "maxLength": 255,
+                            "minLength": 2
                         }
                     },
                     {
                         "name": "limit",
                         "in": "query",
-                        "description": "Maximum number of suggestions to return (1-50, default 20)",
+                        "description": "أقصى عدد للاقتراحات (افتراضي 20، حد أقصى 50)",
                         "required": false,
                         "schema": {
                             "type": "integer",
                             "example": 20,
+                            "default": 20,
                             "maximum": 50,
                             "minimum": 1
                         }
@@ -94,7 +97,7 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Products search completed successfully",
+                        "description": "تم إرجاع المنتجات المقترحة بنجاح",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -104,7 +107,7 @@
                         }
                     },
                     "422": {
-                        "description": "Validation error",
+                        "description": "خطأ في المعاملات — مثلاً q ناقص أو أقل من حرفين",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -2298,20 +2301,24 @@
                 "type": "object"
             },
             "ProductSearchResponse": {
+                "description": "نتائج البحث الذكي عن المنتجات — مرتبة من الأقرب للأبعد",
                 "properties": {
                     "success": {
                         "type": "boolean",
                         "example": true
                     },
                     "query": {
+                        "description": "نص البحث الذي أُرسل في المعامل q",
                         "type": "string",
                         "example": "عسل سدر"
                     },
                     "count": {
+                        "description": "عدد المنتجات المقترحة",
                         "type": "integer",
                         "example": 2
                     },
                     "data": {
+                        "description": "قائمة المنتجات المطابقة مرتبة حسب التقارب",
                         "type": "array",
                         "items": {
                             "$ref": "#/components/schemas/Product"
@@ -2321,8 +2328,10 @@
                 "type": "object"
             },
             "ProductNamesTextResponse": {
+                "description": "كل المنتجات كنص واحد — كل منتج بالصيغة id|اسم المنتج والفاصل بين المنتجات فاصلة",
                 "properties": {
                     "data": {
+                        "description": "نص مفصول بفواصل: id|اسم_المنتج,id|اسم_المنتج,...",
                         "type": "string",
                         "example": "12|عسل سدر,15|عسل مانوكا,22|زيت زيتون"
                     }
@@ -2357,7 +2366,7 @@
     "tags": [
         {
             "name": "Products",
-            "description": "Products"
+            "description": "منتجات المتجر — القائمة الكاملة، البحث الذكي، ونص الأسماء للوكلاء"
         },
         {
             "name": "Branches",

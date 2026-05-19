@@ -1222,8 +1222,8 @@ class AuthController extends Controller
         path: '/api/products',
         operationId: 'getProducts',
         tags: ['Products'],
-        summary: 'Get products list',
-        description: 'Returns all products in one response. Each item includes is_available (متاح).',
+        summary: 'قائمة المنتجات الكاملة',
+        description: 'يرجع كل المنتجات بتفاصيلها الكاملة. كل منتج يتضمن is_available (متاح).',
         responses: [
             new OA\Response(
                 response: 200,
@@ -1248,8 +1248,8 @@ class AuthController extends Controller
         path: '/api/products/text',
         operationId: 'getProductsNamesAsText',
         tags: ['Products'],
-        summary: 'Get all product names with IDs as comma-separated text',
-        description: 'Returns all products as id|title pairs joined by commas in the data field (e.g. 12|عسل سدر,15|عسل مانوكا).',
+        summary: 'أسماء المنتجات مع المعرّف كنص',
+        description: 'يرجع كل المنتجات في حقل data كنص واحد. كل منتج بالصيغة: id|اسم_المنتج والفاصل بين المنتجات فاصلة (,). مثال: 14|عسل سدر,196|التلبينة النبوية',
         responses: [
             new OA\Response(
                 response: 200,
@@ -1272,35 +1272,35 @@ class AuthController extends Controller
 
     #[OA\Get(
         path: '/api/products/search',
-        operationId: 'searchProductsByName',
+        operationId: 'searchProducts',
         tags: ['Products'],
-        summary: 'Smart product search by name',
-        description: 'Fuzzy search on product titles using a single query parameter. Supports partial matches (start/middle/end of name) and tolerates minor typos. Results are ranked by relevance.',
+        summary: 'بحث ذكي عن منتج بالاسم',
+        description: 'بحث ذكي بمعامل واحد q. يقترح أقرب المنتجات حتى لو كتبت جزء من الاسم (أوله أو آخره) أو فيه خطأ إملائي بسيط. النتائج مرتبة من الأقرب للأبعد.',
         parameters: [
             new OA\Parameter(
                 name: 'q',
-                description: 'Search text (partial name, typo-tolerant)',
+                description: 'نص البحث — جزء من اسم المنتج (حد أدنى حرفين)',
                 in: 'query',
                 required: true,
-                schema: new OA\Schema(type: 'string', example: 'عسل سدر')
+                schema: new OA\Schema(type: 'string', minLength: 2, maxLength: 255, example: 'عسل سدر')
             ),
             new OA\Parameter(
                 name: 'limit',
-                description: 'Maximum number of suggestions to return (1-50, default 20)',
+                description: 'أقصى عدد للاقتراحات (افتراضي 20، حد أقصى 50)',
                 in: 'query',
                 required: false,
-                schema: new OA\Schema(type: 'integer', example: 20, minimum: 1, maximum: 50)
+                schema: new OA\Schema(type: 'integer', example: 20, minimum: 1, maximum: 50, default: 20)
             ),
         ],
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'Products search completed successfully',
+                description: 'تم إرجاع المنتجات المقترحة بنجاح',
                 content: new OA\JsonContent(ref: '#/components/schemas/ProductSearchResponse')
             ),
             new OA\Response(
                 response: 422,
-                description: 'Validation error',
+                description: 'خطأ في المعاملات — مثلاً q ناقص أو أقل من حرفين',
                 content: new OA\JsonContent(ref: '#/components/schemas/ApiErrorResponse')
             ),
         ]
