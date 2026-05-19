@@ -1244,6 +1244,32 @@ class AuthController extends Controller
     }
 
     #[OA\Get(
+        path: '/api/products/text',
+        operationId: 'getProductsNamesAsText',
+        tags: ['Products'],
+        summary: 'Get all product names as comma-separated text',
+        description: 'Returns all product titles joined into a single comma-separated string in the data field.',
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Product names text fetched successfully',
+                content: new OA\JsonContent(ref: '#/components/schemas/ProductNamesTextResponse')
+            ),
+        ]
+    )]
+    public function apiProductsText(): JsonResponse
+    {
+        $text = Product::query()
+            ->orderBy('title')
+            ->pluck('title')
+            ->map(fn ($title) => trim((string) $title))
+            ->filter()
+            ->implode(',');
+
+        return response()->json(['data' => $text]);
+    }
+
+    #[OA\Get(
         path: '/api/products/search',
         operationId: 'searchProductsByName',
         tags: ['Products'],

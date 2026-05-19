@@ -85,6 +85,16 @@ use OpenApi\Attributes as OA;
     ]
 )]
 #[OA\Schema(
+    schema: 'ProductNamesTextResponse',
+    properties: [
+        new OA\Property(
+            property: 'data',
+            type: 'string',
+            example: 'عسل سدر,عسل مانوكا,زيت زيتون'
+        ),
+    ]
+)]
+#[OA\Schema(
     schema: 'ProductSearchByDiseaseResponse',
     properties: [
         new OA\Property(property: 'success', type: 'boolean', example: true),

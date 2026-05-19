@@ -14,6 +14,7 @@ Route::match(['put', 'patch'], '/customers/{remote_jid}', [AuthController::class
 Route::delete('/customers/{remote_jid}', [AuthController::class, 'apiDestroyCustomer'])->name('api.customers.destroy')->where('remote_jid', '.+');
 
 Route::get('/products', [AuthController::class, 'apiProducts'])->name('api.products.index');
+Route::get('/products/text', [AuthController::class, 'apiProductsText'])->name('api.products.text');
 Route::get('/products/search', [AuthController::class, 'apiSearchProducts'])->name('api.products.search');
 Route::get('/products/search-by-disease', [AuthController::class, 'apiSearchProductsByDisease'])->name('api.products.search-by-disease');
 Route::get('/branches', [AuthController::class, 'apiBranches'])->name('api.branches.index');

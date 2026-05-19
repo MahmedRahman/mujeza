@@ -38,6 +38,28 @@
                 }
             }
         },
+        "/api/products/text": {
+            "get": {
+                "tags": [
+                    "Products"
+                ],
+                "summary": "Get all product names as comma-separated text",
+                "description": "Returns all product titles joined into a single comma-separated string in the data field.",
+                "operationId": "getProductsNamesAsText",
+                "responses": {
+                    "200": {
+                        "description": "Product names text fetched successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProductNamesTextResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/products/search": {
             "get": {
                 "tags": [
@@ -2292,6 +2314,15 @@
                         "items": {
                             "$ref": "#/components/schemas/Product"
                         }
+                    }
+                },
+                "type": "object"
+            },
+            "ProductNamesTextResponse": {
+                "properties": {
+                    "data": {
+                        "type": "string",
+                        "example": "عسل سدر,عسل مانوكا,زيت زيتون"
                     }
                 },
                 "type": "object"
