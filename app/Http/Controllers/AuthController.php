@@ -14,6 +14,7 @@ use App\Models\OrderItem;
 use App\Models\OrderStatusHistory;
 use App\Services\ConversationConversionService;
 use App\Services\DashboardAlertsService;
+use App\Services\ProductSearchService;
 use App\Models\Setting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -1273,22 +1274,22 @@ class AuthController extends Controller
         path: '/api/products/search',
         operationId: 'searchProductsByName',
         tags: ['Products'],
-        summary: 'Search products by name',
-        description: 'Searches products using product title or description (partial match). Each item includes is_available (متاح).',
+        summary: 'Smart product search by name',
+        description: 'Fuzzy search on product titles using a single query parameter. Supports partial matches (start/middle/end of name) and tolerates minor typos. Results are ranked by relevance.',
         parameters: [
             new OA\Parameter(
-                name: 'name',
-                description: 'Product name to search for (optional if search is provided)',
+                name: 'q',
+                description: 'Search text (partial name, typo-tolerant)',
                 in: 'query',
-                required: false,
-                schema: new OA\Schema(type: 'string', example: 'سدر')
+                required: true,
+                schema: new OA\Schema(type: 'string', example: 'عسل سدر')
             ),
             new OA\Parameter(
-                name: 'search',
-                description: 'Alias for name query parameter',
+                name: 'limit',
+                description: 'Maximum number of suggestions to return (1-50, default 20)',
                 in: 'query',
                 required: false,
-                schema: new OA\Schema(type: 'string', example: 'سدر')
+                schema: new OA\Schema(type: 'integer', example: 20, minimum: 1, maximum: 50)
             ),
         ],
         responses: [
@@ -1304,29 +1305,28 @@ class AuthController extends Controller
             ),
         ]
     )]
-    public function apiSearchProducts(Request $request): JsonResponse
+    public function apiSearchProducts(Request $request, ProductSearchService $productSearchService): JsonResponse
     {
-        $query = trim((string) ($request->query('name') ?? $request->query('search') ?? ''));
+        $validated = $request->validate([
+            'q' => ['required', 'string', 'min:2', 'max:255'],
+            'limit' => ['sometimes', 'integer', 'min:1', 'max:50'],
+        ]);
 
-        $productsQuery = Product::query();
+        $query = trim((string) $validated['q']);
+        $limit = (int) ($validated['limit'] ?? 20);
 
-        if ($query !== '') {
-            $productsQuery->where(function ($builder) use ($query) {
-                $builder->where('title', 'like', '%'.$query.'%')
-                    ->orWhere('description', 'like', '%'.$query.'%');
-            });
-        }
+        $matches = $productSearchService->search($query, $limit);
 
-        $products = $productsQuery->latest()->get();
-
-        $items = $products->map(fn (Product $product) => $this->transformProductForApi($product))->values();
+        $items = $matches
+            ->map(fn (array $row) => $this->transformProductForApi($row['product']))
+            ->values();
 
         return response()->json([
             'success' => true,
             'query' => $query,
             'count' => $items->count(),
             'data' => $items,
-        ]);
+        ], 200, [], JSON_UNESCAPED_UNICODE);
     }
 
     #[OA\Get(

@@ -65,28 +65,30 @@
                 "tags": [
                     "Products"
                 ],
-                "summary": "Search products by name",
-                "description": "Searches products using product title or description (partial match). Each item includes is_available (متاح).",
+                "summary": "Smart product search by name",
+                "description": "Fuzzy search on product titles using a single query parameter. Supports partial matches (start/middle/end of name) and tolerates minor typos. Results are ranked by relevance.",
                 "operationId": "searchProductsByName",
                 "parameters": [
                     {
-                        "name": "name",
+                        "name": "q",
                         "in": "query",
-                        "description": "Product name to search for (optional if search is provided)",
-                        "required": false,
+                        "description": "Search text (partial name, typo-tolerant)",
+                        "required": true,
                         "schema": {
                             "type": "string",
-                            "example": "سدر"
+                            "example": "عسل سدر"
                         }
                     },
                     {
-                        "name": "search",
+                        "name": "limit",
                         "in": "query",
-                        "description": "Alias for name query parameter",
+                        "description": "Maximum number of suggestions to return (1-50, default 20)",
                         "required": false,
                         "schema": {
-                            "type": "string",
-                            "example": "سدر"
+                            "type": "integer",
+                            "example": 20,
+                            "maximum": 50,
+                            "minimum": 1
                         }
                     }
                 ],
@@ -2303,7 +2305,7 @@
                     },
                     "query": {
                         "type": "string",
-                        "example": "سدر"
+                        "example": "عسل سدر"
                     },
                     "count": {
                         "type": "integer",

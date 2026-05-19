@@ -75,7 +75,7 @@ use OpenApi\Attributes as OA;
     schema: 'ProductSearchResponse',
     properties: [
         new OA\Property(property: 'success', type: 'boolean', example: true),
-        new OA\Property(property: 'query', type: 'string', example: 'سدر'),
+        new OA\Property(property: 'query', type: 'string', example: 'عسل سدر'),
         new OA\Property(property: 'count', type: 'integer', example: 2),
         new OA\Property(
             property: 'data',
