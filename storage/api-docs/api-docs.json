@@ -43,8 +43,8 @@
                 "tags": [
                     "Products"
                 ],
-                "summary": "Get all product names as comma-separated text",
-                "description": "Returns all product titles joined into a single comma-separated string in the data field.",
+                "summary": "Get all product names with IDs as comma-separated text",
+                "description": "Returns all products as id|title pairs joined by commas in the data field (e.g. 12|عسل سدر,15|عسل مانوكا).",
                 "operationId": "getProductsNamesAsText",
                 "responses": {
                     "200": {
@@ -2322,7 +2322,7 @@
                 "properties": {
                     "data": {
                         "type": "string",
-                        "example": "عسل سدر,عسل مانوكا,زيت زيتون"
+                        "example": "12|عسل سدر,15|عسل مانوكا,22|زيت زيتون"
                     }
                 },
                 "type": "object"

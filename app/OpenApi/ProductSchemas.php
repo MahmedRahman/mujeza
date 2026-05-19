@@ -90,7 +90,7 @@ use OpenApi\Attributes as OA;
         new OA\Property(
             property: 'data',
             type: 'string',
-            example: 'عسل سدر,عسل مانوكا,زيت زيتون'
+            example: '12|عسل سدر,15|عسل مانوكا,22|زيت زيتون'
         ),
     ]
 )]

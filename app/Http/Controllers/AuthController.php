@@ -1247,8 +1247,8 @@ class AuthController extends Controller
         path: '/api/products/text',
         operationId: 'getProductsNamesAsText',
         tags: ['Products'],
-        summary: 'Get all product names as comma-separated text',
-        description: 'Returns all product titles joined into a single comma-separated string in the data field.',
+        summary: 'Get all product names with IDs as comma-separated text',
+        description: 'Returns all products as id|title pairs joined by commas in the data field (e.g. 12|عسل سدر,15|عسل مانوكا).',
         responses: [
             new OA\Response(
                 response: 200,
@@ -1261,12 +1261,12 @@ class AuthController extends Controller
     {
         $text = Product::query()
             ->orderBy('title')
-            ->pluck('title')
-            ->map(fn ($title) => trim((string) $title))
-            ->filter()
+            ->get(['id', 'title'])
+            ->map(fn (Product $product) => $product->id.'|'.trim((string) $product->title))
+            ->filter(fn (string $entry) => ! str_ends_with($entry, '|'))
             ->implode(',');
 
-        return response()->json(['data' => $text]);
+        return response()->json(['data' => $text], 200, [], JSON_UNESCAPED_UNICODE);
     }
 
     #[OA\Get(
